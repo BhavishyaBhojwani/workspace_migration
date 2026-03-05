@@ -1,7 +1,7 @@
 {% extends 'layouts/app.html' %}
 
 {% block nav_deals %}bg-gray-700 text-white{% endblock %}
-{% block page_title %}Add Deal{% endblock %}
+{% block page_title %}Create Deal{% endblock %}
 
 {% block page_content %}
 <div x-data="dealCreate()" x-init="init()">
@@ -11,127 +11,264 @@
             <a href="/deals" class="text-gray-500 hover:text-gray-700 mr-4">
                 <i class="fas fa-arrow-left"></i>
             </a>
-            <h1 class="text-2xl font-bold text-gray-800">Add Deal</h1>
+            <h1 class="text-2xl font-bold text-gray-800">Create Deal</h1>
         </div>
+        <a href="/deals" class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition">
+            <i class="fas fa-arrow-left mr-2"></i> Back to deals
+        </a>
     </div>
-    
+    <!-- Error Display -->
+    <div x-show="errorMsg" class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <p x-text="errorMsg"></p>
+    </div>
     <!-- Form -->
-    <form @submit.prevent="submit()" class="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div class="p-6 space-y-6">
-            <!-- Error Display -->
-            <div x-show="errorMsg" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                <p x-text="errorMsg"></p>
-            </div>
-            
-            <!-- Basic Information -->
-            <div>
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">Deal Information</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Deal Name *</label>
-                        <input type="text" x-model="form.name" required placeholder="e.g. Enterprise Software License"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+    <form @submit.prevent="submit()">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Main Content - 2 columns -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Deal Details Card -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
+                        <i class="fas fa-bullseye text-indigo-500 mr-2"></i>Deal Details
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                            <input type="text" x-model="form.name" required placeholder="Enter deal title"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                            <textarea x-model="form.description" rows="3" placeholder="Add description..."
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Value</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                                <input type="number" x-model="form.amount" step="0.01" min="0" placeholder="0.00"
+                                    class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+                            <select x-model="form.currency"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="USD">US Dollar (USD)</option>
+                                <option value="EUR">Euro (EUR)</option>
+                                <option value="GBP">British Pound (GBP)</option>
+                                <option value="INR">Indian Rupee (INR)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Expected Close Date</label>
+                            <input type="date" x-model="form.expected_close"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Stage</label>
+                            <select x-model="form.pipeline_stage_id"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">Draft</option>
+                                <template x-for="stage in pipelineStages" :key="stage.id">
+                                    <option :value="stage.id" x-text="stage.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Labels</label>
+                            <input type="text" x-model="form.labels" placeholder="Add labels (comma separated)"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Expected Close Date</label>
-                        <input type="date" x-model="form.expected_close"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <!-- Contact & Organization Card -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
+                        <i class="fas fa-users text-indigo-500 mr-2"></i>Contact & Organization
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Customer</label>
+                            <input type="text" x-model="form.customer_name" placeholder="Customer name"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Organization *</label>
+                            <select x-model="form.organisation_id"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">-- Select Organization --</option>
+                                <template x-for="org in organisations" :key="org.id">
+                                    <option :value="org.id" x-text="org.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person *</label>
+                            <select x-model="form.person_id"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">-- Select Person --</option>
+                                <template x-for="person in people" :key="person.id">
+                                    <option :value="person.id" x-text="person.first_name + ' ' + person.last_name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Owner</label>
+                            <select x-model="form.owner_id"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <template x-for="user in users" :key="user.id">
+                                    <option :value="user.id" x-text="user.name"></option>
+                                </template>
+                            </select>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Confidence (%)</label>
-                        <input type="number" x-model="form.confidence" min="0" max="100" placeholder="50"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <!-- Person Details Card (Collapsible) -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200" x-data="{ expanded: false }">
+                    <div class="p-4 flex items-center justify-between cursor-pointer" @click="expanded = !expanded">
+                        <h3 class="text-lg font-semibold text-gray-800">
+                            <i class="fas fa-user text-indigo-500 mr-2"></i>Person Details
+                            <span class="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
+                        </h3>
+                        <i class="fas transition-transform" :class="expanded ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                    </div>
+                    <div x-show="expanded" x-collapse class="px-6 pb-6 border-t border-gray-200 pt-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                                <input type="text" x-model="form.person_phone" placeholder="Phone number"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Phone Type</label>
+                                <select x-model="form.phone_type"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="Mobile">Mobile</option>
+                                    <option value="Work">Work</option>
+                                    <option value="Home">Home</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <input type="email" x-model="form.person_email" placeholder="Email address"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Email Type</label>
+                                <select x-model="form.email_type"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="Work">Work</option>
+                                    <option value="Personal">Personal</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Organization Address Card (Collapsible) -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200" x-data="{ expanded: false }">
+                    <div class="p-4 flex items-center justify-between cursor-pointer" @click="expanded = !expanded">
+                        <h3 class="text-lg font-semibold text-gray-800">
+                            <i class="fas fa-building text-indigo-500 mr-2"></i>Organization Address
+                            <span class="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
+                        </h3>
+                        <i class="fas transition-transform" :class="expanded ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                    </div>
+                    <div x-show="expanded" x-collapse class="px-6 pb-6 border-t border-gray-200 pt-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Address Line 1</label>
+                                <input type="text" x-model="form.address_line1" placeholder="Street address"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Address Line 2</label>
+                                <input type="text" x-model="form.address_line2" placeholder="Apt, suite, unit, etc."
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">City</label>
+                                <input type="text" x-model="form.city" placeholder="City"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">State</label>
+                                <input type="text" x-model="form.state" placeholder="State / Province"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Zip Code</label>
+                                <input type="text" x-model="form.zip_code" placeholder="Postal code"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                                <select x-model="form.country"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="United States">United States</option>
+                                    <option value="United Kingdom">United Kingdom</option>
+                                    <option value="India">India</option>
+                                    <option value="Canada">Canada</option>
+                                    <option value="Australia">Australia</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Products Card (Collapsible) -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200" x-data="{ expanded: false }">
+                    <div class="p-4 flex items-center justify-between cursor-pointer" @click="expanded = !expanded">
+                        <h3 class="text-lg font-semibold text-gray-800">
+                            <i class="fas fa-box text-indigo-500 mr-2"></i>Products
+                            <span class="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
+                        </h3>
+                        <i class="fas transition-transform" :class="expanded ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                    </div>
+                    <div x-show="expanded" x-collapse class="px-6 pb-6 border-t border-gray-200 pt-4">
+                        <div class="space-y-2">
+                            <template x-for="(product, idx) in form.products" :key="idx">
+                                <div class="grid grid-cols-4 gap-2 items-center">
+                                    <input type="text" x-model="product.item" placeholder="Item" class="col-span-1 px-2 py-1 border border-gray-300 rounded">
+                                    <input type="number" x-model="product.price" placeholder="Price" class="col-span-1 px-2 py-1 border border-gray-300 rounded">
+                                    <input type="number" x-model="product.quantity" min="1" placeholder="Qty" class="col-span-1 px-2 py-1 border border-gray-300 rounded">
+                                    <input type="number" x-model="product.amount" placeholder="Amount" class="col-span-1 px-2 py-1 border border-gray-300 rounded">
+                                </div>
+                            </template>
+                            <button type="button" @click="form.products.push({ item: '', price: '', quantity: 1, amount: '' })" class="mt-2 px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+                                <i class="fas fa-plus mr-1"></i> Add Product
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Associations -->
-            <div>
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">Associations</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Person</label>
-                        <select x-model="form.person_id"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="">-- Select Person --</option>
-                            <template x-for="person in people" :key="person.id">
-                                <option :value="person.id" x-text="person.first_name + ' ' + person.last_name"></option>
-                            </template>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Organisation</label>
-                        <select x-model="form.organisation_id"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="">-- Select Organisation --</option>
-                            <template x-for="org in organisations" :key="org.id">
-                                <option :value="org.id" x-text="org.name"></option>
-                            </template>
-                        </select>
+            <!-- Sidebar - 1 column -->
+            <div class="space-y-6">
+                <!-- Actions Card -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Actions</h3>
+                    <div class="space-y-3">
+                        <button type="submit" :disabled="submitting"
+                            class="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 font-medium">
+                            <i x-show="submitting" class="fas fa-spinner fa-spin mr-2"></i>
+                            <span x-text="submitting ? 'Saving...' : 'Save Deal'"></span>
+                        </button>
+                        <a href="/deals" class="block w-full px-4 py-3 text-center border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
+                            Cancel
+                        </a>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Pipeline and Value -->
-            <div>
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">Pipeline & Value</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Pipeline</label>
-                        <select x-model="form.pipeline_id" @change="loadPipelineStages()"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="">-- Select Pipeline --</option>
-                            <template x-for="pipeline in pipelines" :key="pipeline.id">
-                                <option :value="pipeline.id" x-text="pipeline.name"></option>
-                            </template>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Pipeline Stage</label>
-                        <select x-model="form.pipeline_stage_id"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="">-- Select Stage --</option>
-                            <template x-for="stage in pipelineStages" :key="stage.id">
-                                <option :value="stage.id" x-text="stage.name"></option>
-                            </template>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
-                        <input type="number" x-model="form.amount" step="0.01" min="0" placeholder="0.00"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Currency</label>
-                        <select x-model="form.currency"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="USD">USD</option>
-                            <option value="EUR">EUR</option>
-                            <option value="GBP">GBP</option>
-                            <option value="INR">INR</option>
-                        </select>
-                    </div>
+                <!-- Quick Info -->
+                <div class="bg-indigo-50 rounded-xl border border-indigo-100 p-6">
+                    <h4 class="font-semibold text-indigo-800 mb-2">
+                        <i class="fas fa-lightbulb mr-2"></i>Tips
+                    </h4>
+                    <ul class="text-sm text-indigo-700 space-y-2">
+                        <li><i class="fas fa-check text-indigo-500 mr-2"></i>Add a clear, descriptive title</li>
+                        <li><i class="fas fa-check text-indigo-500 mr-2"></i>Link to organization & contact</li>
+                        <li><i class="fas fa-check text-indigo-500 mr-2"></i>Set an estimated value</li>
+                    </ul>
                 </div>
             </div>
-            
-            <!-- Description -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea x-model="form.description" rows="3" placeholder="Additional details about this deal..."
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
-            </div>
-        </div>
-        
-        <!-- Footer -->
-        <div class="px-4 sm:px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 rounded-b-xl">
-            <a href="/deals" class="w-full sm:w-auto text-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition">
-                Cancel
-            </a>
-            <button type="submit" :disabled="submitting"
-                class="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50">
-                <i x-show="submitting" class="fas fa-spinner fa-spin mr-2"></i>
-                <span x-text="submitting ? 'Saving...' : 'Save Deal'"></span>
-            </button>
         </div>
     </form>
 </div>
@@ -141,114 +278,105 @@ function dealCreate() {
     return {
         form: {
             name: '', description: '',
+            customer_name: '',
             person_id: '', organisation_id: '',
-            pipeline_id: '', pipeline_stage_id: '',
+            pipeline_stage_id: '',
             amount: '', currency: 'USD',
-            expected_close: '', confidence: 50
+            expected_close: '', labels: '', owner_id: '',
+            person_phone: '', phone_type: 'Mobile',
+            person_email: '', email_type: 'Work',
+            address_line1: '', address_line2: '',
+            city: '', state: '', zip_code: '', country: 'United States',
+            products: []
         },
         people: [],
         organisations: [],
-        pipelines: [],
         pipelineStages: [],
+        users: [],
         submitting: false,
         errorMsg: '',
-        
         async init() {
             const token = localStorage.getItem('access_token');
             if (!token) { window.location.href = '/login'; return; }
-            
+            const userData = localStorage.getItem('user');
+            if (userData) {
+                const user = JSON.parse(userData);
+                this.form.owner_id = user.id;
+                this.users = [{ id: user.id, name: user.name }];
+            }
             await Promise.all([
                 this.loadPeople(),
                 this.loadOrganisations(),
-                this.loadPipelines()
+                this.loadPipelineStages(),
+                this.loadUsers()
             ]);
-            
-            // Pre-select from URL params
-            const params = new URLSearchParams(window.location.search);
-            if (params.has('person')) this.form.person_id = params.get('person');
-            if (params.has('organisation')) this.form.organisation_id = params.get('organisation');
-            if (params.has('lead')) await this.loadFromLead(params.get('lead'));
         },
-        
-        async loadFromLead(leadId) {
+        async loadPeople() {
             try {
-                const res = await fetch(`/api/v1/crm/leads/${leadId}/`, {
+                const res = await fetch('/api/v1/people/', {
                     headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
                 });
                 if (res.ok) {
-                    const lead = await res.json();
-                    this.form.name = lead.title;
-                    this.form.person_id = lead.person_id || '';
-                    this.form.organisation_id = lead.organisation_id || '';
-                    this.form.amount = lead.amount_display || '';
-                    this.form.currency = lead.currency || 'USD';
-                    this.form.pipeline_id = lead.pipeline_id || '';
-                    if (this.form.pipeline_id) {
-                        await this.loadPipelineStages();
-                        this.form.pipeline_stage_id = lead.pipeline_stage_id || '';
-                    }
+                    const data = await res.json();
+                    this.people = data.data || [];
                 }
-            } catch (e) { console.error('Error loading lead:', e); }
+            } catch (e) { console.error('Error loading people:', e); }
         },
-        
-        async loadPeople() {
-            try {
-                const res = await fetch('/api/v1/crm/people/', {
-                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
-                });
-                if (res.ok) this.people = (await res.json()).results || [];
-            } catch (e) {}
-        },
-        
         async loadOrganisations() {
             try {
-                const res = await fetch('/api/v1/crm/organisations/', {
+                const res = await fetch('/api/v1/organisations/', {
                     headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
                 });
-                if (res.ok) this.organisations = (await res.json()).results || [];
-            } catch (e) {}
+                if (res.ok) {
+                    const data = await res.json();
+                    this.organisations = data.data || [];
+                }
+            } catch (e) { console.error('Error loading organisations:', e); }
         },
-        
-        async loadPipelines() {
-            try {
-                const res = await fetch('/api/v1/crm/pipelines/', {
-                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
-                });
-                if (res.ok) this.pipelines = (await res.json()).results || [];
-            } catch (e) {}
-        },
-        
         async loadPipelineStages() {
-            this.pipelineStages = [];
-            this.form.pipeline_stage_id = '';
-            if (!this.form.pipeline_id) return;
-            
             try {
-                const res = await fetch(`/api/v1/crm/pipeline-stages/?pipeline_id=${this.form.pipeline_id}`, {
+                const res = await fetch('/api/v1/crm/pipeline-stages/', {
                     headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
                 });
-                if (res.ok) this.pipelineStages = (await res.json()).results || [];
-            } catch (e) {}
+                if (res.ok) {
+                    const data = await res.json();
+                    this.pipelineStages = data.results || data.data || [];
+                }
+            } catch (e) { console.error('Error loading stages:', e); }
         },
-        
+        async loadUsers() {
+            try {
+                const res = await fetch('/api/v1/auth/users/', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.data?.length) this.users = data.data;
+                    else if (data.results?.length) this.users = data.results;
+                }
+            } catch (e) { console.error('Error loading users:', e); }
+        },
         async submit() {
-            this.submitting = true;
             this.errorMsg = '';
-            
+            if (!this.form.name) {
+                this.errorMsg = 'Title is required';
+                return;
+            }
+            this.submitting = true;
             try {
                 const payload = {
                     name: this.form.name,
-                    description: this.form.description || null,
+                    description: this.form.description,
                     person_id: this.form.person_id || null,
                     organisation_id: this.form.organisation_id || null,
-                    pipeline_id: this.form.pipeline_id || null,
                     pipeline_stage_id: this.form.pipeline_stage_id || null,
-                    amount: this.form.amount ? parseFloat(this.form.amount) : null,
+                    amount: this.form.amount ? Math.round(parseFloat(this.form.amount) * 100) : 0,
                     currency: this.form.currency,
                     expected_close: this.form.expected_close || null,
-                    confidence: this.form.confidence ? parseInt(this.form.confidence) : null
+                    labels: this.form.labels,
+                    owner_id: this.form.owner_id || null,
+                    products: this.form.products
                 };
-                
                 const res = await fetch('/api/v1/crm/deals/', {
                     method: 'POST',
                     headers: {
