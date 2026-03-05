@@ -1,0 +1,224 @@
+{% extends 'layouts/app.html' %}
+
+{% block nav_activities %}bg-gray-700 text-white{% endblock %}
+{% block page_title %}Task Details{% endblock %}
+
+{% block page_content %}
+<div x-data="taskShow()" x-init="init()">
+    <!-- Loading State -->
+    <div x-show="loading" class="flex justify-center py-12">
+        <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+    </div>
+    
+    <template x-if="!loading && task">
+        <div>
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+                <div class="flex items-center">
+                    <a href="/activities/" class="text-gray-500 hover:text-gray-700 mr-3">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800" :class="task.completed_at ? 'line-through text-gray-400' : ''" x-text="task.name"></h1>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 mt-4 sm:mt-0">
+                    <button @click="toggleComplete()" :class="task.completed_at ? 'bg-gray-600 hover:bg-gray-700' : 'bg-green-600 hover:bg-green-700'"
+                        class="px-4 py-2 text-white rounded-lg">
+                        <i :class="task.completed_at ? 'fas fa-undo' : 'fas fa-check'" class="mr-2"></i>
+                        <span x-text="task.completed_at ? 'Mark Incomplete' : 'Mark Complete'"></span>
+                    </button>
+                    <a :href="'/activities/' + task.id + '/edit'" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-edit mr-2"></i> Edit
+                    </a>
+                    <button @click="deleteTask()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        <i class="fas fa-trash mr-2"></i> Delete
+                    </button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Main Details -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Task Info -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Task Details</h2>
+                        
+                        <div class="space-y-4">
+                            <div x-show="task.description">
+                                <p class="text-sm text-gray-500">Description</p>
+                                <p class="text-gray-700 whitespace-pre-wrap" x-text="task.description"></p>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-sm text-gray-500">Due Date</p>
+                                    <p class="font-medium" :class="isOverdue() ? 'text-red-600' : ''" x-text="formatDateTime(task.due_at)"></p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Status</p>
+                                    <span class="px-2 py-1 text-xs rounded-full" :class="getStatusClass()" x-text="getStatusText()"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Related Record -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" x-show="task.taskable_type">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Related To</h2>
+                        <div class="flex items-center">
+                            <i class="fas fa-link w-8 text-gray-400"></i>
+                            <span class="text-gray-700" x-text="task.taskable_type + ' #' + task.taskable_id"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sidebar -->
+                <div class="space-y-6">
+                    <!-- Status Card -->
+                    <div :class="task.completed_at ? 'bg-green-600' : isOverdue() ? 'bg-red-600' : 'bg-indigo-600'" class="rounded-xl shadow-sm p-6 text-white">
+                        <p class="text-white/80">Status</p>
+                        <p class="text-2xl font-bold" x-text="getStatusText()"></p>
+                    </div>
+                    
+                    <!-- Assigned To -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" x-show="task.user_assigned_name">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Assigned To</h2>
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center mr-3">
+                                <span class="text-white font-medium" x-text="task.user_assigned_name?.charAt(0).toUpperCase()"></span>
+                            </div>
+                            <span class="text-gray-700" x-text="task.user_assigned_name"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Reminders -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Reminders</h2>
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-600">Email Reminder</span>
+                                <span :class="task.reminder_email ? 'text-green-600' : 'text-gray-400'" x-text="task.reminder_email ? 'Enabled' : 'Disabled'"></span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-600">SMS Reminder</span>
+                                <span :class="task.reminder_sms ? 'text-green-600' : 'text-gray-400'" x-text="task.reminder_sms ? 'Enabled' : 'Disabled'"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Timeline -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Timeline</h2>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Created</span>
+                                <span class="font-medium" x-text="formatDateTime(task.created_at)"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Updated</span>
+                                <span class="font-medium" x-text="formatDateTime(task.updated_at)"></span>
+                            </div>
+                            <div class="flex justify-between" x-show="task.completed_at">
+                                <span class="text-gray-500">Completed</span>
+                                <span class="font-medium text-green-600" x-text="formatDateTime(task.completed_at)"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+
+<script>
+function taskShow() {
+    return {
+        task: null,
+        loading: true,
+        
+        async init() {
+            const id = window.location.pathname.split('/')[2];
+            await this.loadTask(id);
+        },
+        
+        async loadTask(id) {
+            this.loading = true;
+            try {
+                const response = await fetch('/api/v1/activities/tasks/' + id + '/', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.task = data.data;
+                }
+            } catch (error) {
+                console.error('Error loading task:', error);
+            }
+            this.loading = false;
+        },
+        
+        async toggleComplete() {
+            try {
+                const endpoint = this.task.completed_at ? 'uncomplete' : 'complete';
+                const response = await fetch('/api/v1/activities/tasks/' + this.task.id + '/' + endpoint + '/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.task = data.data;
+                }
+            } catch (error) {
+                console.error('Error toggling task:', error);
+            }
+        },
+        
+        async deleteTask() {
+            if (!confirm('Delete this task?')) return;
+            try {
+                const response = await fetch('/api/v1/activities/tasks/' + this.task.id + '/', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/activities/';
+                }
+            } catch (error) {
+                console.error('Error deleting task:', error);
+            }
+        },
+        
+        isOverdue() {
+            if (!this.task.due_at || this.task.completed_at) return false;
+            return new Date(this.task.due_at) < new Date();
+        },
+        
+        getStatusText() {
+            if (this.task.completed_at) return 'Completed';
+            if (this.isOverdue()) return 'Overdue';
+            return 'Pending';
+        },
+        
+        getStatusClass() {
+            const status = this.getStatusText().toLowerCase();
+            if (status === 'completed') return 'bg-green-100 text-green-800';
+            if (status === 'overdue') return 'bg-red-100 text-red-800';
+            return 'bg-yellow-100 text-yellow-800';
+        },
+        
+        formatDateTime(dateString) {
+            if (!dateString) return '-';
+            return new Date(dateString).toLocaleString();
+        }
+    }
+}
+</script>
+{% endblock %}

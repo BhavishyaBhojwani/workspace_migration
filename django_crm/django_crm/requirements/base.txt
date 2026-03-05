@@ -1,0 +1,6 @@
+# base requirements
+django>=4.0
+djangorestframework
+djangorestframework-simplejwt
+django-cors-headers
+psycopg[binary]

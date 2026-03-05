@@ -1,0 +1,207 @@
+{% extends 'layouts/app.html' %}
+
+{% block nav_invoices %}bg-gray-700 text-white{% endblock %}
+{% block page_title %}Edit Invoice{% endblock %}
+
+{% block page_content %}
+<div x-data="invoiceEdit()" x-init="init()">
+    <!-- Loading State -->
+    <div x-show="loading" class="flex justify-center py-12">
+        <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+    </div>
+    
+    <template x-if="!loading">
+        <div>
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center">
+                    <a :href="'/invoices/' + form.id" class="text-gray-500 hover:text-gray-700 mr-3">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <h1 class="text-2xl font-bold text-gray-800">Edit Invoice</h1>
+                </div>
+            </div>
+            
+            <form @submit.prevent="submit()">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">Invoice Details</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Reference</label>
+                            <input type="text" x-model="form.reference"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Currency</label>
+                            <select x-model="form.currency"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                                <option value="GBP">GBP</option>
+                                <option value="INR">INR</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Person</label>
+                            <select x-model="form.person_id"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">Select Person</option>
+                                <template x-for="person in people" :key="person.id">
+                                    <option :value="person.id" x-text="person.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Organisation</label>
+                            <select x-model="form.organisation_id"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">Select Organisation</option>
+                                <template x-for="org in organisations" :key="org.id">
+                                    <option :value="org.id" x-text="org.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Issue Date</label>
+                            <input type="date" x-model="form.issue_date"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
+                            <input type="date" x-model="form.due_date"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Terms -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">Terms & Conditions</h2>
+                    <textarea x-model="form.terms" rows="4"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                </div>
+                
+                <div class="flex items-center justify-end gap-3">
+                    <a :href="'/invoices/' + form.id" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                        Cancel
+                    </a>
+                    <button type="submit" :disabled="submitting"
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+                        <i class="fas fa-spinner fa-spin mr-2" x-show="submitting"></i>
+                        Update Invoice
+                    </button>
+                </div>
+            </form>
+        </div>
+    </template>
+</div>
+
+<script>
+function invoiceEdit() {
+    return {
+        form: {
+            id: null,
+            reference: '',
+            person_id: '',
+            organisation_id: '',
+            currency: 'USD',
+            issue_date: '',
+            due_date: '',
+            terms: ''
+        },
+        people: [],
+        organisations: [],
+        loading: true,
+        submitting: false,
+        
+        async init() {
+            const id = window.location.pathname.split('/')[2];
+            await Promise.all([
+                this.loadInvoice(id),
+                this.loadPeople(),
+                this.loadOrganisations()
+            ]);
+        },
+        
+        async loadInvoice(id) {
+            try {
+                const response = await fetch('/api/v1/sales/invoices/' + id + '/', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    const inv = data.data;
+                    this.form = {
+                        id: inv.id,
+                        reference: inv.reference || '',
+                        person_id: inv.person_id || '',
+                        organisation_id: inv.organisation_id || '',
+                        currency: inv.currency || 'USD',
+                        issue_date: inv.issue_date || '',
+                        due_date: inv.due_date || '',
+                        terms: inv.terms || ''
+                    };
+                }
+            } catch (error) {
+                console.error('Error loading invoice:', error);
+            }
+            this.loading = false;
+        },
+        
+        async loadPeople() {
+            try {
+                const response = await fetch('/api/v1/crm/people/?per_page=100', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                const data = await response.json();
+                if (data.success) this.people = data.data;
+            } catch (error) {
+                console.error('Error loading people:', error);
+            }
+        },
+        
+        async loadOrganisations() {
+            try {
+                const response = await fetch('/api/v1/crm/organisations/?per_page=100', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                const data = await response.json();
+                if (data.success) this.organisations = data.data;
+            } catch (error) {
+                console.error('Error loading organisations:', error);
+            }
+        },
+        
+        async submit() {
+            this.submitting = true;
+            try {
+                const response = await fetch('/api/v1/sales/invoices/' + this.form.id + '/', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    },
+                    body: JSON.stringify(this.form)
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/invoices/' + this.form.id;
+                } else {
+                    alert(data.message || 'Error updating invoice');
+                }
+            } catch (error) {
+                console.error('Error updating invoice:', error);
+                alert('Error updating invoice');
+            }
+            this.submitting = false;
+        }
+    }
+}
+</script>
+{% endblock %}

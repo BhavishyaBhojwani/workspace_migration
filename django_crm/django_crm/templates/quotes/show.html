@@ -1,0 +1,333 @@
+{% extends 'layouts/app.html' %}
+
+{% block nav_quotes %}bg-gray-700 text-white{% endblock %}
+{% block page_title %}Quote Details{% endblock %}
+
+{% block page_content %}
+<div x-data="quoteShow()" x-init="init()">
+    <!-- Loading State -->
+    <div x-show="loading" class="flex justify-center py-12">
+        <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+    </div>
+    
+    <template x-if="!loading && quote">
+        <div>
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+                <div class="flex items-center">
+                    <a href="/quotes/" class="text-gray-500 hover:text-gray-700 mr-3">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800" x-text="quote.title"></h1>
+                        <p class="text-gray-500" x-text="quote.quote_id"></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 mt-4 sm:mt-0">
+                    <span class="px-3 py-1 text-sm rounded-full" :class="getStatusClass()" x-text="getStatusText()"></span>
+                    <a :href="'/quotes/' + quote.id + '/edit'" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-edit mr-2"></i> Edit
+                    </a>
+                    <button @click="deleteQuote()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        <i class="fas fa-trash mr-2"></i> Delete
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6" x-show="!quote.accepted_at && !quote.rejected_at">
+                <div class="flex flex-wrap gap-2">
+                    <button @click="acceptQuote()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                        <i class="fas fa-check mr-2"></i> Accept Quote
+                    </button>
+                    <button @click="rejectQuote()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        <i class="fas fa-times mr-2"></i> Reject Quote
+                    </button>
+                    <button @click="convertToOrder()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                        <i class="fas fa-shopping-cart mr-2"></i> Convert to Order
+                    </button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Main Details -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Quote Info -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Quote Information</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-500">Reference</p>
+                                <p class="font-medium" x-text="quote.reference || '-'"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Currency</p>
+                                <p class="font-medium" x-text="quote.currency"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Issue Date</p>
+                                <p class="font-medium" x-text="formatDate(quote.issue_at)"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Expiry Date</p>
+                                <p class="font-medium" x-text="formatDate(quote.expire_at)"></p>
+                            </div>
+                        </div>
+                        <div class="mt-4" x-show="quote.description">
+                            <p class="text-sm text-gray-500">Description</p>
+                            <p class="font-medium" x-text="quote.description"></p>
+                        </div>
+                    </div>
+                    
+                    <!-- Products -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Products</h2>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full">
+                                <thead>
+                                    <tr class="border-b border-gray-200">
+                                        <th class="text-left py-2 text-sm font-medium text-gray-500">Product</th>
+                                        <th class="text-right py-2 text-sm font-medium text-gray-500">Price</th>
+                                        <th class="text-right py-2 text-sm font-medium text-gray-500">Qty</th>
+                                        <th class="text-right py-2 text-sm font-medium text-gray-500">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="product in quote.products" :key="product.id">
+                                        <tr class="border-b border-gray-100">
+                                            <td class="py-3" x-text="product.product_name || 'Product'"></td>
+                                            <td class="py-3 text-right" x-text="formatCurrency(product.price)"></td>
+                                            <td class="py-3 text-right" x-text="product.quantity"></td>
+                                            <td class="py-3 text-right font-medium" x-text="formatCurrency(product.amount)"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="border-t border-gray-200">
+                                        <td colspan="3" class="py-2 text-right text-gray-500">Subtotal:</td>
+                                        <td class="py-2 text-right font-medium" x-text="formatCurrency(quote.subtotal)"></td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3" class="py-2 text-right text-gray-500">Tax:</td>
+                                        <td class="py-2 text-right font-medium" x-text="formatCurrency(quote.tax)"></td>
+                                    </tr>
+                                    <tr class="text-lg">
+                                        <td colspan="3" class="py-2 text-right font-bold">Total:</td>
+                                        <td class="py-2 text-right font-bold" x-text="formatCurrency(quote.total)"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Terms -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" x-show="quote.terms">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Terms & Conditions</h2>
+                        <p class="text-gray-700 whitespace-pre-wrap" x-text="quote.terms"></p>
+                    </div>
+                </div>
+                
+                <!-- Sidebar -->
+                <div class="space-y-6">
+                    <!-- Total Card -->
+                    <div class="bg-indigo-600 rounded-xl shadow-sm p-6 text-white">
+                        <p class="text-indigo-200">Total Amount</p>
+                        <p class="text-3xl font-bold" x-text="formatCurrency(quote.total)"></p>
+                    </div>
+                    
+                    <!-- Contact -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Contact</h2>
+                        <div class="space-y-3" x-show="quote.person_name">
+                            <div class="flex items-center">
+                                <i class="fas fa-user w-8 text-gray-400"></i>
+                                <a :href="'/people/' + quote.person_id" class="text-indigo-600 hover:text-indigo-800" x-text="quote.person_name"></a>
+                            </div>
+                        </div>
+                        <div class="space-y-3" x-show="quote.organisation_name">
+                            <div class="flex items-center">
+                                <i class="fas fa-building w-8 text-gray-400"></i>
+                                <a :href="'/organisations/' + quote.organisation_id" class="text-indigo-600 hover:text-indigo-800" x-text="quote.organisation_name"></a>
+                            </div>
+                        </div>
+                        <div class="space-y-3" x-show="quote.deal_name">
+                            <div class="flex items-center">
+                                <i class="fas fa-handshake w-8 text-gray-400"></i>
+                                <a :href="'/deals/' + quote.deal_id" class="text-indigo-600 hover:text-indigo-800" x-text="quote.deal_name"></a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Timeline -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Timeline</h2>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Created</span>
+                                <span class="font-medium" x-text="formatDateTime(quote.created_at)"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Updated</span>
+                                <span class="font-medium" x-text="formatDateTime(quote.updated_at)"></span>
+                            </div>
+                            <div class="flex justify-between" x-show="quote.accepted_at">
+                                <span class="text-gray-500">Accepted</span>
+                                <span class="font-medium text-green-600" x-text="formatDateTime(quote.accepted_at)"></span>
+                            </div>
+                            <div class="flex justify-between" x-show="quote.rejected_at">
+                                <span class="text-gray-500">Rejected</span>
+                                <span class="font-medium text-red-600" x-text="formatDateTime(quote.rejected_at)"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+
+<script>
+function quoteShow() {
+    return {
+        quote: null,
+        loading: true,
+        
+        async init() {
+            const id = window.location.pathname.split('/')[2];
+            await this.loadQuote(id);
+        },
+        
+        async loadQuote(id) {
+            this.loading = true;
+            try {
+                const response = await fetch('/api/v1/sales/quotes/' + id + '/', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.quote = data.data;
+                }
+            } catch (error) {
+                console.error('Error loading quote:', error);
+            }
+            this.loading = false;
+        },
+        
+        async acceptQuote() {
+            if (!confirm('Accept this quote?')) return;
+            try {
+                const response = await fetch('/api/v1/sales/quotes/' + this.quote.id + '/accept/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.quote = data.data;
+                } else {
+                    alert(data.message || 'Error accepting quote');
+                }
+            } catch (error) {
+                console.error('Error accepting quote:', error);
+            }
+        },
+        
+        async rejectQuote() {
+            if (!confirm('Reject this quote?')) return;
+            try {
+                const response = await fetch('/api/v1/sales/quotes/' + this.quote.id + '/reject/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.quote = data.data;
+                } else {
+                    alert(data.message || 'Error rejecting quote');
+                }
+            } catch (error) {
+                console.error('Error rejecting quote:', error);
+            }
+        },
+        
+        async convertToOrder() {
+            if (!confirm('Convert this quote to an order?')) return;
+            try {
+                const response = await fetch('/api/v1/sales/quotes/' + this.quote.id + '/convert-to-order/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/orders/' + data.data.id;
+                } else {
+                    alert(data.message || 'Error converting quote');
+                }
+            } catch (error) {
+                console.error('Error converting quote:', error);
+            }
+        },
+        
+        async deleteQuote() {
+            if (!confirm('Delete this quote?')) return;
+            try {
+                const response = await fetch('/api/v1/sales/quotes/' + this.quote.id + '/', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/quotes/';
+                } else {
+                    alert(data.message || 'Error deleting quote');
+                }
+            } catch (error) {
+                console.error('Error deleting quote:', error);
+            }
+        },
+        
+        formatDate(dateString) {
+            if (!dateString) return '-';
+            return new Date(dateString).toLocaleDateString();
+        },
+        
+        formatDateTime(dateString) {
+            if (!dateString) return '-';
+            return new Date(dateString).toLocaleString();
+        },
+        
+        formatCurrency(amount) {
+            if (amount === null || amount === undefined) return '-';
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: this.quote?.currency || 'USD'
+            }).format(amount / 100);
+        },
+        
+        getStatusText() {
+            if (this.quote.accepted_at) return 'Accepted';
+            if (this.quote.rejected_at) return 'Rejected';
+            if (this.quote.expire_at && new Date(this.quote.expire_at) < new Date()) return 'Expired';
+            return 'Pending';
+        },
+        
+        getStatusClass() {
+            const status = this.getStatusText().toLowerCase();
+            if (status === 'accepted') return 'bg-green-100 text-green-800';
+            if (status === 'rejected') return 'bg-red-100 text-red-800';
+            if (status === 'expired') return 'bg-gray-100 text-gray-800';
+            return 'bg-yellow-100 text-yellow-800';
+        }
+    }
+}
+</script>
+{% endblock %}

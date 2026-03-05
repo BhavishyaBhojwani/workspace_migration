@@ -1,0 +1,274 @@
+{% extends 'layouts/app.html' %}
+
+{% block nav_invoices %}bg-gray-700 text-white{% endblock %}
+{% block page_title %}Invoice Details{% endblock %}
+
+{% block page_content %}
+<div x-data="invoiceShow()" x-init="init()">
+    <!-- Loading State -->
+    <div x-show="loading" class="flex justify-center py-12">
+        <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+    </div>
+    
+    <template x-if="!loading && invoice">
+        <div>
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+                <div class="flex items-center">
+                    <a href="/invoices/" class="text-gray-500 hover:text-gray-700 mr-3">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800" x-text="invoice.invoice_id"></h1>
+                        <p class="text-gray-500" x-text="invoice.reference"></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 mt-4 sm:mt-0">
+                    <span class="px-3 py-1 text-sm rounded-full" :class="getStatusClass()" x-text="getStatusText()"></span>
+                    <a :href="'/invoices/' + invoice.id + '/edit'" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-edit mr-2"></i> Edit
+                    </a>
+                    <button @click="markAsPaid()" x-show="!invoice.fully_paid_at" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                        <i class="fas fa-check mr-2"></i> Mark Paid
+                    </button>
+                    <button @click="deleteInvoice()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        <i class="fas fa-trash mr-2"></i> Delete
+                    </button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Main Details -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Invoice Info -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Invoice Information</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-500">Invoice ID</p>
+                                <p class="font-medium" x-text="invoice.invoice_id"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Reference</p>
+                                <p class="font-medium" x-text="invoice.reference || '-'"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Issue Date</p>
+                                <p class="font-medium" x-text="formatDate(invoice.issue_date)"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Due Date</p>
+                                <p class="font-medium" :class="isOverdue() ? 'text-red-600' : ''" x-text="formatDate(invoice.due_date)"></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Line Items -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Line Items</h2>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full">
+                                <thead>
+                                    <tr class="border-b border-gray-200">
+                                        <th class="text-left py-2 text-sm font-medium text-gray-500">Description</th>
+                                        <th class="text-right py-2 text-sm font-medium text-gray-500">Price</th>
+                                        <th class="text-right py-2 text-sm font-medium text-gray-500">Qty</th>
+                                        <th class="text-right py-2 text-sm font-medium text-gray-500">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="line in invoice.lines" :key="line.id">
+                                        <tr class="border-b border-gray-100">
+                                            <td class="py-3" x-text="line.description || 'Line Item'"></td>
+                                            <td class="py-3 text-right" x-text="formatCurrency(line.price)"></td>
+                                            <td class="py-3 text-right" x-text="line.quantity"></td>
+                                            <td class="py-3 text-right font-medium" x-text="formatCurrency(line.amount)"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="border-t border-gray-200">
+                                        <td colspan="3" class="py-2 text-right text-gray-500">Subtotal:</td>
+                                        <td class="py-2 text-right font-medium" x-text="formatCurrency(invoice.subtotal)"></td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3" class="py-2 text-right text-gray-500">Tax:</td>
+                                        <td class="py-2 text-right font-medium" x-text="formatCurrency(invoice.tax)"></td>
+                                    </tr>
+                                    <tr class="text-lg">
+                                        <td colspan="3" class="py-2 text-right font-bold">Total:</td>
+                                        <td class="py-2 text-right font-bold" x-text="formatCurrency(invoice.total)"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Terms -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" x-show="invoice.terms">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Terms & Conditions</h2>
+                        <p class="text-gray-700 whitespace-pre-wrap" x-text="invoice.terms"></p>
+                    </div>
+                </div>
+                
+                <!-- Sidebar -->
+                <div class="space-y-6">
+                    <!-- Amount Due Card -->
+                    <div :class="invoice.fully_paid_at ? 'bg-green-600' : isOverdue() ? 'bg-red-600' : 'bg-indigo-600'" class="rounded-xl shadow-sm p-6 text-white">
+                        <p class="text-white/80" x-text="invoice.fully_paid_at ? 'Paid' : 'Amount Due'"></p>
+                        <p class="text-3xl font-bold" x-text="formatCurrency(invoice.fully_paid_at ? invoice.amount_paid : invoice.amount_due)"></p>
+                    </div>
+                    
+                    <!-- Contact -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Bill To</h2>
+                        <div class="space-y-3">
+                            <div class="flex items-center" x-show="invoice.person_name">
+                                <i class="fas fa-user w-8 text-gray-400"></i>
+                                <a :href="'/people/' + invoice.person_id" class="text-indigo-600 hover:text-indigo-800" x-text="invoice.person_name"></a>
+                            </div>
+                            <div class="flex items-center" x-show="invoice.organisation_name">
+                                <i class="fas fa-building w-8 text-gray-400"></i>
+                                <a :href="'/organisations/' + invoice.organisation_id" class="text-indigo-600 hover:text-indigo-800" x-text="invoice.organisation_name"></a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Related Order -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" x-show="invoice.order_id">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Related Order</h2>
+                        <a :href="'/orders/' + invoice.order_id" class="text-indigo-600 hover:text-indigo-800">
+                            <i class="fas fa-shopping-cart mr-2"></i>
+                            View Order
+                        </a>
+                    </div>
+                    
+                    <!-- Timeline -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Timeline</h2>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Created</span>
+                                <span class="font-medium" x-text="formatDateTime(invoice.created_at)"></span>
+                            </div>
+                            <div class="flex justify-between" x-show="invoice.sent">
+                                <span class="text-gray-500">Sent</span>
+                                <span class="font-medium text-green-600">Yes</span>
+                            </div>
+                            <div class="flex justify-between" x-show="invoice.fully_paid_at">
+                                <span class="text-gray-500">Paid</span>
+                                <span class="font-medium text-green-600" x-text="formatDateTime(invoice.fully_paid_at)"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+
+<script>
+function invoiceShow() {
+    return {
+        invoice: null,
+        loading: true,
+        
+        async init() {
+            const id = window.location.pathname.split('/')[2];
+            await this.loadInvoice(id);
+        },
+        
+        async loadInvoice(id) {
+            this.loading = true;
+            try {
+                const response = await fetch('/api/v1/sales/invoices/' + id + '/', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.invoice = data.data;
+                }
+            } catch (error) {
+                console.error('Error loading invoice:', error);
+            }
+            this.loading = false;
+        },
+        
+        async markAsPaid() {
+            if (!confirm('Mark this invoice as paid?')) return;
+            try {
+                const response = await fetch('/api/v1/sales/invoices/' + this.invoice.id + '/mark-paid/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.invoice = data.data;
+                }
+            } catch (error) {
+                console.error('Error marking invoice as paid:', error);
+            }
+        },
+        
+        async deleteInvoice() {
+            if (!confirm('Delete this invoice?')) return;
+            try {
+                const response = await fetch('/api/v1/sales/invoices/' + this.invoice.id + '/', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/invoices/';
+                }
+            } catch (error) {
+                console.error('Error deleting invoice:', error);
+            }
+        },
+        
+        isOverdue() {
+            if (this.invoice.fully_paid_at) return false;
+            if (!this.invoice.due_date) return false;
+            return new Date(this.invoice.due_date) < new Date();
+        },
+        
+        getStatusText() {
+            if (this.invoice.fully_paid_at) return 'Paid';
+            if (this.isOverdue()) return 'Overdue';
+            return 'Unpaid';
+        },
+        
+        getStatusClass() {
+            const status = this.getStatusText().toLowerCase();
+            if (status === 'paid') return 'bg-green-100 text-green-800';
+            if (status === 'overdue') return 'bg-red-100 text-red-800';
+            return 'bg-yellow-100 text-yellow-800';
+        },
+        
+        formatDate(dateString) {
+            if (!dateString) return '-';
+            return new Date(dateString).toLocaleDateString();
+        },
+        
+        formatDateTime(dateString) {
+            if (!dateString) return '-';
+            return new Date(dateString).toLocaleString();
+        },
+        
+        formatCurrency(amount) {
+            if (amount === null || amount === undefined) return '-';
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: this.invoice?.currency || 'USD'
+            }).format(amount / 100);
+        }
+    }
+}
+</script>
+{% endblock %}

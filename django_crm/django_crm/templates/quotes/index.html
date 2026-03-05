@@ -1,0 +1,322 @@
+{% extends 'layouts/app.html' %}
+
+{% block nav_quotes %}bg-gray-700 text-white{% endblock %}
+{% block page_title %}Quotes{% endblock %}
+
+{% block page_content %}
+<div x-data="quotesIndex()" x-init="init()">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Quotes</h1>
+        <a href="/quotes/create" class="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+            <i class="fas fa-plus mr-2"></i>
+            Add Quote
+        </a>
+    </div>
+    
+    <!-- Search and Filters -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+        <div class="flex flex-col md:flex-row md:items-center gap-4">
+            <div class="flex-1">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" x-model="search" @input.debounce.300ms="loadData()"
+                        placeholder="Search quotes..."
+                        class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <select x-model="filters.status" @change="loadData()"
+                    class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+                    <option value="">All Statuses</option>
+                    <option value="draft">Draft</option>
+                    <option value="pending">Pending</option>
+                    <option value="accepted">Accepted</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+                <select x-model="perPage" @change="loadData()"
+                    class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+                    <option value="10">10 per page</option>
+                    <option value="25">25 per page</option>
+                    <option value="50">50 per page</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading State -->
+    <div x-show="loading" class="flex justify-center py-12">
+        <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+    </div>
+    
+    <!-- Empty State -->
+    <template x-if="!loading && quotes.length === 0">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <i class="fas fa-file-alt text-5xl text-gray-300 mb-4"></i>
+            <p class="text-gray-500 text-lg">No quotes found</p>
+            <a href="/quotes/create" class="mt-4 inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                <i class="fas fa-plus mr-2"></i> Add Quote
+            </a>
+        </div>
+    </template>
+
+    <!-- Mobile Cards -->
+    <div x-show="!loading && quotes.length > 0" class="md:hidden space-y-4">
+        <template x-for="quote in quotes" :key="quote.id">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                <div class="flex items-start justify-between mb-3">
+                    <div>
+                        <a :href="'/quotes/' + quote.id" class="text-indigo-600 hover:text-indigo-800 font-semibold text-lg" x-text="quote.title"></a>
+                        <p class="text-gray-500 text-sm" x-text="quote.quote_id"></p>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <a :href="'/quotes/' + quote.id" class="p-2 text-gray-500 hover:text-indigo-600">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a :href="'/quotes/' + quote.id + '/edit'" class="p-2 text-gray-500 hover:text-blue-600">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="space-y-2 text-sm">
+                    <div class="flex items-center" x-show="quote.person_name">
+                        <i class="fas fa-user w-5 text-gray-400"></i>
+                        <span class="text-gray-600 ml-2" x-text="quote.person_name"></span>
+                    </div>
+                    <div class="flex items-center" x-show="quote.organisation_name">
+                        <i class="fas fa-building w-5 text-gray-400"></i>
+                        <span class="text-gray-600 ml-2" x-text="quote.organisation_name"></span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-dollar-sign w-5 text-gray-400"></i>
+                        <span class="text-gray-600 ml-2" x-text="formatCurrency(quote.total, quote.currency)"></span>
+                    </div>
+                    <div class="flex items-center justify-between pt-2 border-t border-gray-100">
+                        <span class="px-2 py-1 text-xs rounded-full" :class="getStatusClass(quote)" x-text="getStatusText(quote)"></span>
+                        <span class="text-gray-400 text-xs" x-text="'Expires ' + formatDate(quote.expire_at)"></span>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+    
+    <!-- Desktop Table -->
+    <div x-show="!loading && quotes.length > 0" class="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quote</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organisation</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expires</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <template x-for="quote in quotes" :key="quote.id">
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <a :href="'/quotes/' + quote.id" class="text-indigo-600 hover:text-indigo-800 font-medium" x-text="quote.title"></a>
+                                <p class="text-gray-500 text-sm" x-text="quote.quote_id"></p>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="text-gray-700" x-text="quote.person_name || '-'"></span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="text-gray-700" x-text="quote.organisation_name || '-'"></span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="text-gray-700 font-medium" x-text="formatCurrency(quote.total, quote.currency)"></span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs rounded-full" :class="getStatusClass(quote)" x-text="getStatusText(quote)"></span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-gray-500 text-sm" x-text="formatDate(quote.expire_at)"></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-gray-500 text-sm" x-text="formatDate(quote.created_at)"></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                                <div class="flex items-center justify-end gap-2">
+                                    <a :href="'/quotes/' + quote.id" class="text-gray-500 hover:text-indigo-600" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a :href="'/quotes/' + quote.id + '/edit'" class="text-gray-500 hover:text-blue-600" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button @click="convertToOrder(quote)" class="text-gray-500 hover:text-green-600" title="Convert to Order">
+                                        <i class="fas fa-shopping-cart"></i>
+                                    </button>
+                                    <button @click="deleteQuote(quote)" class="text-gray-500 hover:text-red-600" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    <div x-show="!loading && meta.last_page > 1" class="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <p class="text-gray-500 text-sm">
+            Showing <span x-text="((meta.current_page - 1) * perPage) + 1"></span> to 
+            <span x-text="Math.min(meta.current_page * perPage, meta.total)"></span> of 
+            <span x-text="meta.total"></span> quotes
+        </p>
+        <div class="flex items-center gap-2">
+            <button @click="prevPage()" :disabled="meta.current_page === 1"
+                class="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <span class="text-gray-700">Page <span x-text="meta.current_page"></span> of <span x-text="meta.last_page"></span></span>
+            <button @click="nextPage()" :disabled="meta.current_page === meta.last_page"
+                class="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function quotesIndex() {
+    return {
+        quotes: [],
+        loading: true,
+        search: '',
+        filters: {
+            status: '',
+        },
+        perPage: 25,
+        meta: {
+            current_page: 1,
+            last_page: 1,
+            total: 0
+        },
+        
+        async init() {
+            await this.loadData();
+        },
+        
+        async loadData() {
+            this.loading = true;
+            try {
+                const params = new URLSearchParams({
+                    page: this.meta.current_page,
+                    per_page: this.perPage,
+                    search: this.search
+                });
+                
+                if (this.filters.status) {
+                    params.append('status', this.filters.status);
+                }
+                
+                const response = await fetch('/api/v1/sales/quotes/?' + params.toString(), {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.quotes = data.data;
+                    this.meta = data.meta;
+                }
+            } catch (error) {
+                console.error('Error loading quotes:', error);
+            }
+            this.loading = false;
+        },
+        
+        async convertToOrder(quote) {
+            if (!confirm(`Convert "${quote.title}" to an order?`)) return;
+            
+            try {
+                const response = await fetch('/api/v1/sales/quotes/' + quote.id + '/convert-to-order/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert('Quote converted to order successfully!');
+                    window.location.href = '/orders/' + data.data.id;
+                } else {
+                    alert(data.message || 'Error converting quote');
+                }
+            } catch (error) {
+                console.error('Error converting quote:', error);
+                alert('Error converting quote');
+            }
+        },
+        
+        async deleteQuote(quote) {
+            if (!confirm(`Delete "${quote.title}"?`)) return;
+            
+            try {
+                const response = await fetch('/api/v1/sales/quotes/' + quote.id + '/', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    await this.loadData();
+                } else {
+                    alert(data.message || 'Error deleting quote');
+                }
+            } catch (error) {
+                console.error('Error deleting quote:', error);
+            }
+        },
+        
+        prevPage() {
+            if (this.meta.current_page > 1) {
+                this.meta.current_page--;
+                this.loadData();
+            }
+        },
+        
+        nextPage() {
+            if (this.meta.current_page < this.meta.last_page) {
+                this.meta.current_page++;
+                this.loadData();
+            }
+        },
+        
+        formatDate(dateString) {
+            if (!dateString) return '-';
+            return new Date(dateString).toLocaleDateString();
+        },
+        
+        formatCurrency(amount, currency) {
+            if (amount === null || amount === undefined) return '-';
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: currency || 'USD'
+            }).format(amount / 100);
+        },
+        
+        getStatusText(quote) {
+            if (quote.accepted_at) return 'Accepted';
+            if (quote.rejected_at) return 'Rejected';
+            if (quote.expire_at && new Date(quote.expire_at) < new Date()) return 'Expired';
+            return 'Pending';
+        },
+        
+        getStatusClass(quote) {
+            const status = this.getStatusText(quote).toLowerCase();
+            if (status === 'accepted') return 'bg-green-100 text-green-800';
+            if (status === 'rejected') return 'bg-red-100 text-red-800';
+            if (status === 'expired') return 'bg-gray-100 text-gray-800';
+            return 'bg-yellow-100 text-yellow-800';
+        }
+    }
+}
+</script>
+{% endblock %}

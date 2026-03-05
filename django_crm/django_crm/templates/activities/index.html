@@ -1,0 +1,313 @@
+{% extends 'layouts/app.html' %}
+
+{% block nav_activities %}bg-gray-700 text-white{% endblock %}
+{% block page_title %}Activities{% endblock %}
+
+{% block page_content %}
+<div x-data="activitiesIndex()" x-init="init()">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Activities</h1>
+        <a href="/activities/create" class="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+            <i class="fas fa-plus mr-2"></i>
+            Add Task
+        </a>
+    </div>
+    
+    <!-- Tabs -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-1 mb-6 inline-flex">
+        <button @click="activeTab = 'tasks'" :class="activeTab === 'tasks' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'"
+            class="px-4 py-2 rounded-lg font-medium transition">
+            <i class="fas fa-tasks mr-2"></i> Tasks
+        </button>
+        <button @click="activeTab = 'activity'" :class="activeTab === 'activity' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'"
+            class="px-4 py-2 rounded-lg font-medium transition">
+            <i class="fas fa-history mr-2"></i> Activity Log
+        </button>
+    </div>
+    
+    <!-- Tasks Tab -->
+    <div x-show="activeTab === 'tasks'">
+        <!-- Filters -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+            <div class="flex flex-col md:flex-row md:items-center gap-4">
+                <div class="flex-1">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" x-model="search" @input.debounce.300ms="loadTasks()"
+                            placeholder="Search tasks..."
+                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <select x-model="filters.status" @change="loadTasks()"
+                        class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+                        <option value="">All Tasks</option>
+                        <option value="pending">Pending</option>
+                        <option value="completed">Completed</option>
+                        <option value="overdue">Overdue</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Loading State -->
+        <div x-show="loading" class="flex justify-center py-12">
+            <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+        </div>
+        
+        <!-- Empty State -->
+        <template x-if="!loading && tasks.length === 0">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                <i class="fas fa-tasks text-5xl text-gray-300 mb-4"></i>
+                <p class="text-gray-500 text-lg">No tasks found</p>
+                <a href="/activities/create" class="mt-4 inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                    <i class="fas fa-plus mr-2"></i> Add Task
+                </a>
+            </div>
+        </template>
+        
+        <!-- Task List -->
+        <div x-show="!loading && tasks.length > 0" class="space-y-3">
+            <template x-for="task in tasks" :key="task.id">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition">
+                    <div class="flex items-start gap-4">
+                        <button @click="toggleComplete(task)" class="mt-1 flex-shrink-0">
+                            <i :class="task.completed_at ? 'fas fa-check-circle text-green-500' : 'far fa-circle text-gray-400 hover:text-indigo-600'" class="text-xl"></i>
+                        </button>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <a :href="'/activities/' + task.id" class="font-semibold text-gray-800 hover:text-indigo-600" 
+                                        :class="task.completed_at ? 'line-through text-gray-400' : ''" x-text="task.name"></a>
+                                    <p class="text-gray-500 text-sm mt-1" x-text="task.description" x-show="task.description"></p>
+                                </div>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <a :href="'/activities/' + task.id + '/edit'" class="text-gray-500 hover:text-blue-600">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button @click="deleteTask(task)" class="text-gray-500 hover:text-red-600">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4 mt-3 text-sm">
+                                <span class="flex items-center text-gray-500" x-show="task.due_at">
+                                    <i class="fas fa-calendar mr-1"></i>
+                                    <span :class="isOverdue(task) ? 'text-red-600 font-medium' : ''" x-text="formatDate(task.due_at)"></span>
+                                </span>
+                                <span class="flex items-center text-gray-500" x-show="task.user_assigned_name">
+                                    <i class="fas fa-user mr-1"></i>
+                                    <span x-text="task.user_assigned_name"></span>
+                                </span>
+                                <span class="px-2 py-0.5 text-xs rounded-full" :class="getPriorityClass(task)" x-text="task.priority || 'Normal'" x-show="task.priority"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Pagination -->
+        <div x-show="!loading && meta.last_page > 1" class="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <p class="text-gray-500 text-sm">
+                Showing <span x-text="((meta.current_page - 1) * perPage) + 1"></span> to 
+                <span x-text="Math.min(meta.current_page * perPage, meta.total)"></span> of 
+                <span x-text="meta.total"></span> tasks
+            </p>
+            <div class="flex items-center gap-2">
+                <button @click="prevPage()" :disabled="meta.current_page === 1"
+                    class="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <span class="text-gray-700">Page <span x-text="meta.current_page"></span> of <span x-text="meta.last_page"></span></span>
+                <button @click="nextPage()" :disabled="meta.current_page === meta.last_page"
+                    class="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Activity Log Tab -->
+    <div x-show="activeTab === 'activity'">
+        <!-- Loading State -->
+        <div x-show="loadingActivities" class="flex justify-center py-12">
+            <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+        </div>
+        
+        <!-- Activity Timeline -->
+        <div x-show="!loadingActivities" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <template x-if="activities.length === 0">
+                <div class="text-center py-8">
+                    <i class="fas fa-history text-4xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500">No activity recorded yet</p>
+                </div>
+            </template>
+            
+            <div class="space-y-6">
+                <template x-for="activity in activities" :key="activity.id">
+                    <div class="flex gap-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-history text-indigo-600"></i>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-gray-800" x-text="activity.description"></p>
+                            <p class="text-gray-500 text-sm mt-1" x-text="formatDateTime(activity.created_at)"></p>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function activitiesIndex() {
+    return {
+        activeTab: 'tasks',
+        tasks: [],
+        activities: [],
+        loading: true,
+        loadingActivities: true,
+        search: '',
+        filters: {
+            status: '',
+        },
+        perPage: 25,
+        meta: {
+            current_page: 1,
+            last_page: 1,
+            total: 0
+        },
+        
+        async init() {
+            await this.loadTasks();
+            await this.loadActivities();
+        },
+        
+        async loadTasks() {
+            this.loading = true;
+            try {
+                const params = new URLSearchParams({
+                    page: this.meta.current_page,
+                    per_page: this.perPage,
+                    search: this.search
+                });
+                
+                if (this.filters.status) {
+                    params.append('status', this.filters.status);
+                }
+                
+                const response = await fetch('/api/v1/activities/tasks/?' + params.toString(), {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.tasks = data.data;
+                    this.meta = data.meta;
+                }
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+            }
+            this.loading = false;
+        },
+        
+        async loadActivities() {
+            this.loadingActivities = true;
+            try {
+                const response = await fetch('/api/v1/activities/?per_page=50', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.activities = data.data;
+                }
+            } catch (error) {
+                console.error('Error loading activities:', error);
+            }
+            this.loadingActivities = false;
+        },
+        
+        async toggleComplete(task) {
+            try {
+                const endpoint = task.completed_at ? 'uncomplete' : 'complete';
+                const response = await fetch('/api/v1/activities/tasks/' + task.id + '/' + endpoint + '/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    task.completed_at = data.data.completed_at;
+                }
+            } catch (error) {
+                console.error('Error toggling task:', error);
+            }
+        },
+        
+        async deleteTask(task) {
+            if (!confirm(`Delete "${task.name}"?`)) return;
+            
+            try {
+                const response = await fetch('/api/v1/activities/tasks/' + task.id + '/', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    await this.loadTasks();
+                }
+            } catch (error) {
+                console.error('Error deleting task:', error);
+            }
+        },
+        
+        prevPage() {
+            if (this.meta.current_page > 1) {
+                this.meta.current_page--;
+                this.loadTasks();
+            }
+        },
+        
+        nextPage() {
+            if (this.meta.current_page < this.meta.last_page) {
+                this.meta.current_page++;
+                this.loadTasks();
+            }
+        },
+        
+        isOverdue(task) {
+            if (!task.due_at || task.completed_at) return false;
+            return new Date(task.due_at) < new Date();
+        },
+        
+        formatDate(dateString) {
+            if (!dateString) return '-';
+            return new Date(dateString).toLocaleDateString();
+        },
+        
+        formatDateTime(dateString) {
+            if (!dateString) return '-';
+            return new Date(dateString).toLocaleString();
+        },
+        
+        getPriorityClass(task) {
+            const priority = (task.priority || 'normal').toLowerCase();
+            if (priority === 'high') return 'bg-red-100 text-red-800';
+            if (priority === 'low') return 'bg-gray-100 text-gray-800';
+            return 'bg-blue-100 text-blue-800';
+        }
+    }
+}
+</script>
+{% endblock %}

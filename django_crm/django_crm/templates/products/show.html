@@ -1,0 +1,187 @@
+{% extends 'layouts/app.html' %}
+
+{% block nav_products %}bg-gray-700 text-white{% endblock %}
+{% block page_title %}Product Details{% endblock %}
+
+{% block page_content %}
+<div x-data="productShow()" x-init="init()">
+    <!-- Loading State -->
+    <div x-show="loading" class="flex justify-center py-12">
+        <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+    </div>
+    
+    <template x-if="!loading && product">
+        <div>
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+                <div class="flex items-center">
+                    <a href="/products/" class="text-gray-500 hover:text-gray-700 mr-3">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800" x-text="product.name"></h1>
+                        <p class="text-gray-500" x-text="product.code || 'No code'"></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 mt-4 sm:mt-0">
+                    <span class="px-3 py-1 text-sm rounded-full" 
+                        :class="product.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
+                        x-text="product.active ? 'Active' : 'Inactive'"></span>
+                    <a :href="'/products/' + product.id + '/edit'" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-edit mr-2"></i> Edit
+                    </a>
+                    <button @click="deleteProduct()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        <i class="fas fa-trash mr-2"></i> Delete
+                    </button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Main Details -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Product Info -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Product Information</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-500">Name</p>
+                                <p class="font-medium" x-text="product.name"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Code</p>
+                                <p class="font-medium" x-text="product.code || '-'"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Barcode</p>
+                                <p class="font-medium" x-text="product.barcode || '-'"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Category</p>
+                                <p class="font-medium" x-text="product.category_name || '-'"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Unit</p>
+                                <p class="font-medium" x-text="product.unit || '-'"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Tax Rate</p>
+                                <p class="font-medium" x-text="product.tax_rate_name || 'None'"></p>
+                            </div>
+                        </div>
+                        <div class="mt-4" x-show="product.description">
+                            <p class="text-sm text-gray-500">Description</p>
+                            <p class="text-gray-700" x-text="product.description"></p>
+                        </div>
+                    </div>
+                    
+                    <!-- Variations -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" x-show="product.variations && product.variations.length > 0">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Variations</h2>
+                        <div class="space-y-3">
+                            <template x-for="variation in product.variations" :key="variation.id">
+                                <div class="p-3 bg-gray-50 rounded-lg flex justify-between items-center">
+                                    <span class="font-medium" x-text="variation.name"></span>
+                                    <span class="text-gray-600" x-text="formatCurrency(variation.price)"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sidebar -->
+                <div class="space-y-6">
+                    <!-- Pricing Card -->
+                    <div class="bg-indigo-600 rounded-xl shadow-sm p-6 text-white">
+                        <div class="mb-4">
+                            <p class="text-white/80">Default Price</p>
+                            <p class="text-3xl font-bold" x-text="formatCurrency(product.default_price)"></p>
+                        </div>
+                        <div>
+                            <p class="text-white/80">Cost Price</p>
+                            <p class="text-xl font-medium" x-text="formatCurrency(product.cost_price)"></p>
+                        </div>
+                    </div>
+                    
+                    <!-- Stats -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Stats</h2>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Created</span>
+                                <span class="font-medium" x-text="formatDateTime(product.created_at)"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Updated</span>
+                                <span class="font-medium" x-text="formatDateTime(product.updated_at)"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+
+<script>
+function productShow() {
+    return {
+        product: null,
+        loading: true,
+        
+        async init() {
+            const id = window.location.pathname.split('/')[2];
+            await this.loadProduct(id);
+        },
+        
+        async loadProduct(id) {
+            this.loading = true;
+            try {
+                const response = await fetch('/api/v1/products/' + id + '/', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.product = data.data;
+                }
+            } catch (error) {
+                console.error('Error loading product:', error);
+            }
+            this.loading = false;
+        },
+        
+        async deleteProduct() {
+            if (!confirm('Delete this product?')) return;
+            try {
+                const response = await fetch('/api/v1/products/' + this.product.id + '/', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/products/';
+                }
+            } catch (error) {
+                console.error('Error deleting product:', error);
+            }
+        },
+        
+        formatDateTime(dateString) {
+            if (!dateString) return '-';
+            return new Date(dateString).toLocaleString();
+        },
+        
+        formatCurrency(amount) {
+            if (amount === null || amount === undefined) return '-';
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD'
+            }).format(amount / 100);
+        }
+    }
+}
+</script>
+{% endblock %}

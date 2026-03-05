@@ -1,0 +1,175 @@
+{% extends 'layouts/app.html' %}
+
+{% block nav_teams %}bg-gray-700 text-white{% endblock %}
+{% block page_title %}Team Details{% endblock %}
+
+{% block page_content %}
+<div x-data="teamShow()" x-init="init()">
+    <!-- Loading State -->
+    <div x-show="loading" class="flex justify-center py-12">
+        <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+    </div>
+    
+    <template x-if="!loading && team">
+        <div>
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+                <div class="flex items-center">
+                    <a href="/teams/" class="text-gray-500 hover:text-gray-700 mr-3">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
+                            <i class="fas fa-users text-indigo-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-800" x-text="team.name"></h1>
+                            <p class="text-gray-500" x-text="(team.members?.length || 0) + ' members'"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 mt-4 sm:mt-0">
+                    <a :href="'/teams/' + team.id + '/edit'" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-edit mr-2"></i> Edit
+                    </a>
+                    <button @click="deleteTeam()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        <i class="fas fa-trash mr-2"></i> Delete
+                    </button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Main Details -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Team Info -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Team Information</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <p class="text-sm text-gray-500">Name</p>
+                                <p class="font-medium" x-text="team.name"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Description</p>
+                                <p class="text-gray-700" x-text="team.description || 'No description'"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Manager</p>
+                                <p class="font-medium" x-text="team.manager_name || '-'"></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Team Members -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Team Members</h2>
+                        <template x-if="!team.members || team.members.length === 0">
+                            <p class="text-gray-500 text-center py-4">No members in this team</p>
+                        </template>
+                        <div class="space-y-3">
+                            <template x-for="member in team.members" :key="member.id">
+                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div class="flex items-center">
+                                        <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
+                                            <span class="text-indigo-600 font-medium" x-text="getInitials(member)"></span>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-gray-700" x-text="member.name"></p>
+                                            <p class="text-gray-500 text-sm" x-text="member.email"></p>
+                                        </div>
+                                    </div>
+                                    <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800" x-text="member.role || 'Member'"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sidebar -->
+                <div class="space-y-6">
+                    <!-- Members Card -->
+                    <div class="bg-indigo-600 rounded-xl shadow-sm p-6 text-white">
+                        <p class="text-white/80">Total Members</p>
+                        <p class="text-3xl font-bold" x-text="team.members?.length || 0"></p>
+                    </div>
+                    
+                    <!-- Timeline -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Timeline</h2>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Created</span>
+                                <span class="font-medium" x-text="formatDateTime(team.created_at)"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Updated</span>
+                                <span class="font-medium" x-text="formatDateTime(team.updated_at)"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+
+<script>
+function teamShow() {
+    return {
+        team: null,
+        loading: true,
+        
+        async init() {
+            const id = window.location.pathname.split('/')[2];
+            await this.loadTeam(id);
+        },
+        
+        async loadTeam(id) {
+            this.loading = true;
+            try {
+                const response = await fetch('/api/v1/accounts/teams/' + id + '/', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.team = data.data;
+                }
+            } catch (error) {
+                console.error('Error loading team:', error);
+            }
+            this.loading = false;
+        },
+        
+        async deleteTeam() {
+            if (!confirm('Delete this team?')) return;
+            try {
+                const response = await fetch('/api/v1/accounts/teams/' + this.team.id + '/', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/teams/';
+                }
+            } catch (error) {
+                console.error('Error deleting team:', error);
+            }
+        },
+        
+        getInitials(member) {
+            const name = member.name || member.email || '';
+            return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+        },
+        
+        formatDateTime(dateString) {
+            if (!dateString) return '-';
+            return new Date(dateString).toLocaleString();
+        }
+    }
+}
+</script>
+{% endblock %}

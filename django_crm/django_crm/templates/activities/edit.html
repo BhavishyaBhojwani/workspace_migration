@@ -1,0 +1,181 @@
+{% extends 'layouts/app.html' %}
+
+{% block nav_activities %}bg-gray-700 text-white{% endblock %}
+{% block page_title %}Edit Task{% endblock %}
+
+{% block page_content %}
+<div x-data="taskEdit()" x-init="init()">
+    <!-- Loading State -->
+    <div x-show="loading" class="flex justify-center py-12">
+        <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+    </div>
+    
+    <template x-if="!loading">
+        <div>
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center">
+                    <a :href="'/activities/' + form.id" class="text-gray-500 hover:text-gray-700 mr-3">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <h1 class="text-2xl font-bold text-gray-800">Edit Task</h1>
+                </div>
+            </div>
+            
+            <form @submit.prevent="submit()">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">Task Details</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Name <span class="text-red-500">*</span></label>
+                            <input type="text" x-model="form.name" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                            <textarea x-model="form.description" rows="3"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
+                            <input type="datetime-local" x-model="form.due_at"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Assign To</label>
+                            <select x-model="form.user_assigned_id"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">Select User</option>
+                                <template x-for="user in users" :key="user.id">
+                                    <option :value="user.id" x-text="user.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Reminders -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">Reminders</h2>
+                    
+                    <div class="space-y-4">
+                        <label class="flex items-center">
+                            <input type="checkbox" x-model="form.reminder_email"
+                                class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <span class="ml-2 text-gray-700">Send email reminder</span>
+                        </label>
+                        
+                        <label class="flex items-center">
+                            <input type="checkbox" x-model="form.reminder_sms"
+                                class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <span class="ml-2 text-gray-700">Send SMS reminder</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-end gap-3">
+                    <a :href="'/activities/' + form.id" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                        Cancel
+                    </a>
+                    <button type="submit" :disabled="submitting"
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+                        <i class="fas fa-spinner fa-spin mr-2" x-show="submitting"></i>
+                        Update Task
+                    </button>
+                </div>
+            </form>
+        </div>
+    </template>
+</div>
+
+<script>
+function taskEdit() {
+    return {
+        form: {
+            id: null,
+            name: '',
+            description: '',
+            due_at: '',
+            user_assigned_id: '',
+            reminder_email: false,
+            reminder_sms: false
+        },
+        users: [],
+        loading: true,
+        submitting: false,
+        
+        async init() {
+            const id = window.location.pathname.split('/')[2];
+            await Promise.all([
+                this.loadTask(id),
+                this.loadUsers()
+            ]);
+        },
+        
+        async loadTask(id) {
+            try {
+                const response = await fetch('/api/v1/activities/tasks/' + id + '/', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    const t = data.data;
+                    this.form = {
+                        id: t.id,
+                        name: t.name || '',
+                        description: t.description || '',
+                        due_at: t.due_at ? t.due_at.slice(0, 16) : '',
+                        user_assigned_id: t.user_assigned_id || '',
+                        reminder_email: t.reminder_email || false,
+                        reminder_sms: t.reminder_sms || false
+                    };
+                }
+            } catch (error) {
+                console.error('Error loading task:', error);
+            }
+            this.loading = false;
+        },
+        
+        async loadUsers() {
+            try {
+                const response = await fetch('/api/v1/accounts/users/?per_page=100', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                const data = await response.json();
+                if (data.success) this.users = data.data;
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        },
+        
+        async submit() {
+            this.submitting = true;
+            try {
+                const response = await fetch('/api/v1/activities/tasks/' + this.form.id + '/', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    },
+                    body: JSON.stringify(this.form)
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/activities/' + this.form.id;
+                } else {
+                    alert(data.message || 'Error updating task');
+                }
+            } catch (error) {
+                console.error('Error updating task:', error);
+                alert('Error updating task');
+            }
+            this.submitting = false;
+        }
+    }
+}
+</script>
+{% endblock %}

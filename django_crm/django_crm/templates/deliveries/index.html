@@ -1,0 +1,261 @@
+{% extends 'layouts/app.html' %}
+
+{% block nav_deliveries %}bg-gray-700 text-white{% endblock %}
+{% block page_title %}Deliveries{% endblock %}
+
+{% block page_content %}
+<div x-data="deliveriesIndex()" x-init="init()">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Deliveries</h1>
+        <a href="/deliveries/create" class="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+            <i class="fas fa-plus mr-2"></i>
+            Add Delivery
+        </a>
+    </div>
+    
+    <!-- Search and Filters -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+        <div class="flex flex-col md:flex-row md:items-center gap-4">
+            <div class="flex-1">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" x-model="search" @input.debounce.300ms="loadData()"
+                        placeholder="Search deliveries..."
+                        class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <select x-model="filters.status" @change="loadData()"
+                    class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+                    <option value="">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="delivered">Delivered</option>
+                </select>
+                <select x-model="perPage" @change="loadData()"
+                    class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+                    <option value="10">10 per page</option>
+                    <option value="25">25 per page</option>
+                    <option value="50">50 per page</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading State -->
+    <div x-show="loading" class="flex justify-center py-12">
+        <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+    </div>
+    
+    <!-- Empty State -->
+    <template x-if="!loading && deliveries.length === 0">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <i class="fas fa-truck text-5xl text-gray-300 mb-4"></i>
+            <p class="text-gray-500 text-lg">No deliveries found</p>
+            <a href="/deliveries/create" class="mt-4 inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                <i class="fas fa-plus mr-2"></i> Add Delivery
+            </a>
+        </div>
+    </template>
+
+    <!-- Mobile Cards -->
+    <div x-show="!loading && deliveries.length > 0" class="md:hidden space-y-4">
+        <template x-for="delivery in deliveries" :key="delivery.id">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                <div class="flex items-start justify-between mb-3">
+                    <div>
+                        <a :href="'/deliveries/' + delivery.id" class="text-indigo-600 hover:text-indigo-800 font-semibold text-lg" x-text="delivery.delivery_id"></a>
+                    </div>
+                    <span class="px-2 py-1 text-xs rounded-full" :class="getStatusClass(delivery)" x-text="getStatusText(delivery)"></span>
+                </div>
+                <div class="space-y-2 text-sm">
+                    <div class="flex items-center justify-between" x-show="delivery.order_id">
+                        <span class="text-gray-500">Order</span>
+                        <span class="font-medium" x-text="delivery.order_id"></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-500">Expected</span>
+                        <span x-text="formatDate(delivery.expected_on)"></span>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+    
+    <!-- Desktop Table -->
+    <div x-show="!loading && deliveries.length > 0" class="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Initiated</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shipped</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expected</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivered</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <template x-for="delivery in deliveries" :key="delivery.id">
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <a :href="'/deliveries/' + delivery.id" class="text-indigo-600 hover:text-indigo-800 font-medium" x-text="delivery.delivery_id"></a>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <a :href="'/orders/' + delivery.order_id" class="text-indigo-600 hover:text-indigo-800" x-text="delivery.order?.order_id || '-'"></a>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-gray-500" x-text="formatDate(delivery.delivery_initiated)"></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-gray-500" x-text="formatDate(delivery.shipped_on)"></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-gray-500" x-text="formatDate(delivery.expected_on)"></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-gray-500" x-text="formatDate(delivery.delivered_on)"></td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs rounded-full" :class="getStatusClass(delivery)" x-text="getStatusText(delivery)"></span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                                <div class="flex items-center justify-end gap-2">
+                                    <a :href="'/deliveries/' + delivery.id" class="text-gray-500 hover:text-indigo-600" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a :href="'/deliveries/' + delivery.id + '/edit'" class="text-gray-500 hover:text-blue-600" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button @click="deleteDelivery(delivery)" class="text-gray-500 hover:text-red-600" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    <div x-show="!loading && meta.last_page > 1" class="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <p class="text-gray-500 text-sm">
+            Showing <span x-text="((meta.current_page - 1) * perPage) + 1"></span> to 
+            <span x-text="Math.min(meta.current_page * perPage, meta.total)"></span> of 
+            <span x-text="meta.total"></span> deliveries
+        </p>
+        <div class="flex items-center gap-2">
+            <button @click="prevPage()" :disabled="meta.current_page === 1"
+                class="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <span class="text-gray-700">Page <span x-text="meta.current_page"></span> of <span x-text="meta.last_page"></span></span>
+            <button @click="nextPage()" :disabled="meta.current_page === meta.last_page"
+                class="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function deliveriesIndex() {
+    return {
+        deliveries: [],
+        loading: true,
+        search: '',
+        filters: {
+            status: ''
+        },
+        perPage: 25,
+        meta: {
+            current_page: 1,
+            last_page: 1,
+            total: 0
+        },
+        
+        async init() {
+            await this.loadData();
+        },
+        
+        async loadData() {
+            this.loading = true;
+            try {
+                const params = new URLSearchParams({
+                    page: this.meta.current_page,
+                    per_page: this.perPage,
+                    search: this.search
+                });
+                
+                if (this.filters.status) {
+                    params.append('status', this.filters.status);
+                }
+                
+                const response = await fetch('/api/v1/sales/deliveries/?' + params.toString(), {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.deliveries = data.data;
+                    this.meta = data.meta;
+                }
+            } catch (error) {
+                console.error('Error loading deliveries:', error);
+            }
+            this.loading = false;
+        },
+        
+        async deleteDelivery(delivery) {
+            if (!confirm(`Delete delivery "${delivery.delivery_id}"?`)) return;
+            
+            try {
+                const response = await fetch('/api/v1/sales/deliveries/' + delivery.id + '/', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    await this.loadData();
+                }
+            } catch (error) {
+                console.error('Error deleting delivery:', error);
+            }
+        },
+        
+        getStatusText(delivery) {
+            if (delivery.delivered_on) return 'Delivered';
+            if (delivery.shipped_on) return 'Shipped';
+            return 'Pending';
+        },
+        
+        getStatusClass(delivery) {
+            const status = this.getStatusText(delivery).toLowerCase();
+            if (status === 'delivered') return 'bg-green-100 text-green-800';
+            if (status === 'shipped') return 'bg-blue-100 text-blue-800';
+            return 'bg-yellow-100 text-yellow-800';
+        },
+        
+        prevPage() {
+            if (this.meta.current_page > 1) {
+                this.meta.current_page--;
+                this.loadData();
+            }
+        },
+        
+        nextPage() {
+            if (this.meta.current_page < this.meta.last_page) {
+                this.meta.current_page++;
+                this.loadData();
+            }
+        },
+        
+        formatDate(dateString) {
+            if (!dateString) return '-';
+            return new Date(dateString).toLocaleDateString();
+        }
+    }
+}
+</script>
+{% endblock %}

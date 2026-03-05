@@ -1,0 +1,10 @@
+[tool.poetry]
+name = "django_crm"
+version = "0.1.0"
+description = "Minimal Django CRM skeleton"
+authors = ["Your Company <dev@company.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+[tool.poetry.dev-dependencies]

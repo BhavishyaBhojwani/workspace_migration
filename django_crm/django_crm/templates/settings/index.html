@@ -1,0 +1,277 @@
+{% extends 'layouts/app.html' %}
+
+{% block nav_settings %}bg-gray-700 text-white{% endblock %}
+{% block page_title %}Settings{% endblock %}
+
+{% block page_content %}
+<div x-data="settingsPage()" x-init="init()">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Settings</h1>
+        <p class="text-gray-500">Manage your CRM settings and preferences</p>
+    </div>
+    
+    <!-- Loading State -->
+    <div x-show="loading" class="flex justify-center py-12">
+        <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+    </div>
+    
+    <template x-if="!loading">
+        <div class="space-y-6">
+            <!-- General Settings -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">General Settings</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
+                        <input type="text" x-model="settings.company_name"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            placeholder="Your Company Name">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Default Currency</label>
+                        <select x-model="settings.default_currency"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="USD">USD - US Dollar</option>
+                            <option value="EUR">EUR - Euro</option>
+                            <option value="GBP">GBP - British Pound</option>
+                            <option value="INR">INR - Indian Rupee</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Date Format</label>
+                        <select x-model="settings.date_format"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                            <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                            <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
+                        <select x-model="settings.timezone"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="UTC">UTC</option>
+                            <option value="America/New_York">Eastern Time (US)</option>
+                            <option value="America/Los_Angeles">Pacific Time (US)</option>
+                            <option value="Europe/London">London</option>
+                            <option value="Asia/Kolkata">India (IST)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sales Settings -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Sales Settings</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Default Quote Expiry (Days)</label>
+                        <input type="number" x-model="settings.quote_expiry_days" min="1"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Default Invoice Due (Days)</label>
+                        <input type="number" x-model="settings.invoice_due_days" min="1"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Quote Prefix</label>
+                        <input type="text" x-model="settings.quote_prefix"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            placeholder="QT-">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Invoice Prefix</label>
+                        <input type="text" x-model="settings.invoice_prefix"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            placeholder="INV-">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Order Prefix</label>
+                        <input type="text" x-model="settings.order_prefix"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            placeholder="ORD-">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tax Rates -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-800">Tax Rates</h2>
+                    <a href="/settings/tax-rates" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                        Manage Tax Rates <i class="fas fa-arrow-right ml-1"></i>
+                    </a>
+                </div>
+                <div class="space-y-2">
+                    <template x-for="rate in taxRates" :key="rate.id">
+                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                            <span class="font-medium" x-text="rate.name"></span>
+                            <span class="text-gray-600" x-text="rate.rate + '%'"></span>
+                        </div>
+                    </template>
+                    <template x-if="taxRates.length === 0">
+                        <p class="text-gray-500 text-center py-4">No tax rates configured</p>
+                    </template>
+                </div>
+            </div>
+            
+            <!-- Product Categories -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-800">Product Categories</h2>
+                    <a href="/settings/categories" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                        Manage Categories <i class="fas fa-arrow-right ml-1"></i>
+                    </a>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <template x-for="category in categories" :key="category.id">
+                        <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm" x-text="category.name"></span>
+                    </template>
+                    <template x-if="categories.length === 0">
+                        <p class="text-gray-500 text-center py-4 w-full">No categories configured</p>
+                    </template>
+                </div>
+            </div>
+            
+            <!-- Deal Stages -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-800">Deal Stages</h2>
+                    <a href="/settings/deal-stages" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                        Manage Stages <i class="fas fa-arrow-right ml-1"></i>
+                    </a>
+                </div>
+                <div class="space-y-2">
+                    <template x-for="(stage, index) in dealStages" :key="stage.id">
+                        <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                            <span class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-medium mr-3" x-text="index + 1"></span>
+                            <span class="font-medium" x-text="stage.name"></span>
+                        </div>
+                    </template>
+                    <template x-if="dealStages.length === 0">
+                        <p class="text-gray-500 text-center py-4">No deal stages configured</p>
+                    </template>
+                </div>
+            </div>
+            
+            <!-- Save Button -->
+            <div class="flex justify-end">
+                <button @click="saveSettings()" :disabled="saving"
+                    class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+                    <i class="fas fa-spinner fa-spin mr-2" x-show="saving"></i>
+                    Save Settings
+                </button>
+            </div>
+        </div>
+    </template>
+</div>
+
+<script>
+function settingsPage() {
+    return {
+        settings: {
+            company_name: '',
+            default_currency: 'USD',
+            date_format: 'MM/DD/YYYY',
+            timezone: 'UTC',
+            quote_expiry_days: 30,
+            invoice_due_days: 30,
+            quote_prefix: 'QT-',
+            invoice_prefix: 'INV-',
+            order_prefix: 'ORD-'
+        },
+        taxRates: [],
+        categories: [],
+        dealStages: [],
+        loading: true,
+        saving: false,
+        
+        async init() {
+            await Promise.all([
+                this.loadSettings(),
+                this.loadTaxRates(),
+                this.loadCategories(),
+                this.loadDealStages()
+            ]);
+            this.loading = false;
+        },
+        
+        async loadSettings() {
+            try {
+                const response = await fetch('/api/v1/settings/', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                const data = await response.json();
+                if (data.success && data.data) {
+                    this.settings = { ...this.settings, ...data.data };
+                }
+            } catch (error) {
+                console.error('Error loading settings:', error);
+            }
+        },
+        
+        async loadTaxRates() {
+            try {
+                const response = await fetch('/api/v1/products/tax-rates/', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                const data = await response.json();
+                if (data.success) this.taxRates = data.data;
+            } catch (error) {
+                console.error('Error loading tax rates:', error);
+            }
+        },
+        
+        async loadCategories() {
+            try {
+                const response = await fetch('/api/v1/products/categories/', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                const data = await response.json();
+                if (data.success) this.categories = data.data;
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        },
+        
+        async loadDealStages() {
+            try {
+                const response = await fetch('/api/v1/crm/deal-stages/', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                const data = await response.json();
+                if (data.success) this.dealStages = data.data;
+            } catch (error) {
+                console.error('Error loading deal stages:', error);
+            }
+        },
+        
+        async saveSettings() {
+            this.saving = true;
+            try {
+                const response = await fetch('/api/v1/settings/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    },
+                    body: JSON.stringify(this.settings)
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert('Settings saved successfully');
+                } else {
+                    alert(data.message || 'Error saving settings');
+                }
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                alert('Error saving settings');
+            }
+            this.saving = false;
+        }
+    }
+}
+</script>
+{% endblock %}

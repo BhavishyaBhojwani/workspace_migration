@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div x-data="appLayout()" x-init="init()" class="min-h-screen flex">
+    <!-- Mobile Overlay -->
+    <div x-show="sidebarOpen" @click="sidebarOpen = false" 
+        class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" x-cloak></div>
+    
+    <!-- Sidebar -->
+    <aside class="fixed lg:static inset-y-0 left-0 z-50 w-64 bg-gray-800 min-h-screen flex-shrink-0 transform transition-transform duration-300 ease-in-out"
+        :class="{ '-translate-x-full lg:translate-x-0': !sidebarOpen, 'translate-x-0': sidebarOpen }" x-cloak>
+        <div class="p-4 border-b border-gray-700 flex items-center justify-between">
+            <a href="/dashboard/" class="flex items-center space-x-2">
+                <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-briefcase text-white"></i>
+                </div>
+                <span class="text-white font-bold text-xl">Django CRM</span>
+            </a>
+            <button @click="sidebarOpen = false" class="lg:hidden text-gray-400 hover:text-white">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <nav class="mt-4 px-2 overflow-y-auto" style="max-height: calc(100vh - 80px);">
+            <a href="/dashboard/" class="flex items-center px-4 py-2.5 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg mb-1 {% block nav_dashboard %}{% endblock %}">
+                <i class="fas fa-tachometer-alt w-5"></i>
+                <span class="ml-3">Dashboard</span>
+            </a>
+            
+            <div class="border-t border-gray-700 my-3"></div>
+            
+            <a href="/leads/" class="flex items-center px-4 py-2.5 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg mb-1 {% block nav_leads %}{% endblock %}">
+                <i class="fas fa-crosshairs w-5"></i>
+                <span class="ml-3">Leads</span>
+            </a>
+            
+            <a href="/deals/" class="flex items-center px-4 py-2.5 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg mb-1 {% block nav_deals %}{% endblock %}">
+                <i class="fas fa-dollar-sign w-5"></i>
+                <span class="ml-3">Deals</span>
+            </a>
+            
+            <a href="/quotes/" class="flex items-center px-4 py-2.5 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg mb-1 {% block nav_quotes %}{% endblock %}">
+                <i class="fas fa-file-alt w-5"></i>
+                <span class="ml-3">Quotes</span>
+            </a>
+            
+            <a href="/activities/" class="flex items-center px-4 py-2.5 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg mb-1 {% block nav_activities %}{% endblock %}">
+                <i class="fas fa-tasks w-5"></i>
+                <span class="ml-3">Activity</span>
+            </a>
+            
+            <div class="border-t border-gray-700 my-3"></div>
+            
+            <a href="/orders/" class="flex items-center px-4 py-2.5 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg mb-1 {% block nav_orders %}{% endblock %}">
+                <i class="fas fa-shopping-cart w-5"></i>
+                <span class="ml-3">Orders</span>
+            </a>
+            
+            <a href="/invoices/" class="flex items-center px-4 py-2.5 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg mb-1 {% block nav_invoices %}{% endblock %}">
+                <i class="fas fa-file-invoice w-5"></i>
+                <span class="ml-3">Invoices</span>
+            </a>
+            
+            <a href="/deliveries/" class="flex items-center px-4 py-2.5 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg mb-1 {% block nav_deliveries %}{% endblock %}">
+                <i class="fas fa-shipping-fast w-5"></i>
+                <span class="ml-3">Deliveries</span>
+            </a>
+            
+            <a href="/purchase-orders/" class="flex items-center px-4 py-2.5 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg mb-1 {% block nav_purchase_orders %}{% endblock %}">
+                <i class="fas fa-file-invoice-dollar w-5"></i>
+                <span class="ml-3">Purchase Orders</span>
+            </a>
+            
+            <div class="border-t border-gray-700 my-3"></div>
+            
+            <a href="/clients/" class="flex items-center px-4 py-2.5 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg mb-1 {% block nav_clients %}{% endblock %}">
+                <i class="fas fa-address-card w-5"></i>
+                <span class="ml-3">Clients</span>
+            </a>
+            
+            <a href="/organisations/" class="flex items-center px-4 py-2.5 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg mb-1 {% block nav_organisations %}{% endblock %}">
+                <i class="fas fa-building w-5"></i>
+                <span class="ml-3">Organisations</span>
+            </a>
+            
+            <a href="/people/" class="flex items-center px-4 py-2.5 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg mb-1 {% block nav_people %}{% endblock %}">
+                <i class="fas fa-user-circle w-5"></i>
+                <span class="ml-3">People</span>
+            </a>
+            
+            <a href="/users/" class="flex items-center px-4 py-2.5 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg mb-1 {% block nav_users %}{% endblock %}">
+                <i class="fas fa-user w-5"></i>
+                <span class="ml-3">Users</span>
+            </a>
+            
+            <a href="/teams/" class="flex items-center px-4 py-2.5 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg mb-1 {% block nav_teams %}{% endblock %}">
+                <i class="fas fa-users w-5"></i>
+                <span class="ml-3">Teams</span>
+            </a>
+            
+            <div class="border-t border-gray-700 my-3"></div>
+            
+            <a href="/products/" class="flex items-center px-4 py-2.5 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg mb-1 {% block nav_products %}{% endblock %}">
+                <i class="fas fa-tag w-5"></i>
+                <span class="ml-3">Products</span>
+            </a>
+            
+            <div class="border-t border-gray-700 my-3"></div>
+            
+            <a href="/settings/" class="flex items-center px-4 py-2.5 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg mb-1 {% block nav_settings %}{% endblock %}">
+                <i class="fas fa-cog w-5"></i>
+                <span class="ml-3">Settings</span>
+            </a>
+        </nav>
+    </aside>
+    
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col lg:ml-0 min-w-0">
+        <!-- Top Navbar -->
+        <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
+            <div class="flex items-center justify-between px-4 sm:px-6 py-4">
+                <div class="flex items-center">
+                    <button @click="sidebarOpen = !sidebarOpen" class="text-gray-500 hover:text-gray-700 mr-3 lg:hidden">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <h1 class="text-lg sm:text-xl font-semibold text-gray-800 truncate">{% block page_title %}Dashboard{% endblock %}</h1>
+                </div>
+                
+                <div class="flex items-center space-x-2 sm:space-x-4">
+                    <div class="relative" x-data="{ open: false }">
+                        <button @click="open = !open" class="flex items-center space-x-2 text-gray-700 hover:text-gray-900">
+                            <div class="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center">
+                                <span class="text-white text-sm font-medium" x-text="user?.name?.charAt(0).toUpperCase() || 'U'"></span>
+                            </div>
+                            <span class="hidden sm:block" x-text="user?.name || 'User'"></span>
+                            <i class="fas fa-chevron-down text-xs hidden sm:inline"></i>
+                        </button>
+                        
+                        <div x-show="open" @click.away="open = false" x-cloak
+                            class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
+                            <a href="/profile/" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-user mr-2"></i> Profile
+                            </a>
+                            <hr class="my-2">
+                            <button @click="logout()" class="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100">
+                                <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Page Content -->
+        <main class="flex-1 p-4 sm:p-6 overflow-auto">
+            {% block page_content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+<script>
+function appLayout() {
+    return {
+        sidebarOpen: window.innerWidth >= 1024,
+        user: null,
+        
+        init() {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+            
+            const userData = localStorage.getItem('user');
+            if (userData) {
+                this.user = JSON.parse(userData);
+            }
+            
+            this.fetchUser();
+        },
+        
+        async fetchUser() {
+            try {
+                const response = await api.get('/auth/user/');
+                if (response && response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        this.user = data.data;
+                        localStorage.setItem('user', JSON.stringify(data.data));
+                    }
+                }
+            } catch (err) {
+                console.error('Error fetching user:', err);
+            }
+        },
+        
+        logout() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+        }
+    }
+}
+</script>
+{% endblock %}

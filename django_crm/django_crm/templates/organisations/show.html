@@ -1,0 +1,226 @@
+{% extends 'layouts/app.html' %}
+
+{% block nav_organisations %}bg-gray-700 text-white{% endblock %}
+{% block page_title %}Organisation Details{% endblock %}
+
+{% block page_content %}
+<div x-data="organisationShow()" x-init="init()">
+    <!-- Loading -->
+    <div x-show="loading" class="flex justify-center py-12">
+        <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+    </div>
+    
+    <!-- Content -->
+    <div x-show="!loading && org">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+            <div class="flex items-center">
+                <a href="/organisations" class="text-gray-500 hover:text-gray-700 mr-4">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800" x-text="org.name"></h1>
+                    <p class="text-gray-500 mt-1">Organisation</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 mt-4 sm:mt-0">
+                <a :href="'/organisations/' + org.id + '/edit'" 
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition">
+                    <i class="fas fa-edit mr-2"></i> Edit
+                </a>
+                <button @click="deleteOrg()"
+                    class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                    <i class="fas fa-trash mr-2"></i> Delete
+                </button>
+            </div>
+        </div>
+        
+        <!-- Details Cards -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Main Info -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-800">Details</h3>
+                    </div>
+                    <div class="p-6">
+                        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Name</dt>
+                                <dd class="mt-1 text-gray-800" x-text="org.name || '-'"></dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Phone</dt>
+                                <dd class="mt-1 text-gray-800" x-text="org.phone || '-'"></dd>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <dt class="text-sm font-medium text-gray-500">Description</dt>
+                                <dd class="mt-1 text-gray-800" x-text="org.description || '-'"></dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+                
+                <!-- Address Card -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-800">Address</h3>
+                    </div>
+                    <div class="p-6">
+                        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Address Line 1</dt>
+                                <dd class="mt-1 text-gray-800" x-text="org.address_line_1 || '-'"></dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Address Line 2</dt>
+                                <dd class="mt-1 text-gray-800" x-text="org.address_line_2 || '-'"></dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">City</dt>
+                                <dd class="mt-1 text-gray-800" x-text="org.city || '-'"></dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">State/Province</dt>
+                                <dd class="mt-1 text-gray-800" x-text="org.state || '-'"></dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Postcode</dt>
+                                <dd class="mt-1 text-gray-800" x-text="org.postcode || '-'"></dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Country</dt>
+                                <dd class="mt-1 text-gray-800" x-text="org.country || '-'"></dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+                
+                <!-- People -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-800">People</h3>
+                        <a href="/people/create" class="text-sm text-indigo-600 hover:text-indigo-700">
+                            <i class="fas fa-plus mr-1"></i> Add Person
+                        </a>
+                    </div>
+                    <div class="p-6">
+                        <template x-if="people.length === 0">
+                            <p class="text-gray-500 text-center py-4">No people linked to this organisation</p>
+                        </template>
+                        <div class="space-y-3">
+                            <template x-for="person in people" :key="person.id">
+                                <a :href="'/people/' + person.id" 
+                                    class="flex items-center p-3 hover:bg-gray-50 rounded-lg transition border border-gray-200">
+                                    <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                        <span class="text-green-600 font-medium" 
+                                            x-text="(person.first_name?.charAt(0) || '') + (person.last_name?.charAt(0) || '')"></span>
+                                    </div>
+                                    <div class="ml-3">
+                                        <p class="font-medium text-gray-800" x-text="person.first_name + ' ' + person.last_name"></p>
+                                        <p class="text-sm text-gray-500" x-text="person.title || person.email || ''"></p>
+                                    </div>
+                                </a>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sidebar -->
+            <div class="space-y-6">
+                <!-- Created Info -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h4 class="text-sm font-semibold text-gray-800 mb-4">Timeline</h4>
+                    <div class="space-y-3 text-sm">
+                        <div>
+                            <span class="text-gray-500">Created:</span>
+                            <span class="text-gray-800 ml-2" x-text="formatDate(org.created_at)"></span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Updated:</span>
+                            <span class="text-gray-800 ml-2" x-text="formatDate(org.updated_at)"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h4 class="text-sm font-semibold text-gray-800 mb-4">Quick Actions</h4>
+                    <div class="space-y-2">
+                        <a :href="'/people/create?organisation=' + org.id" 
+                            class="flex items-center p-3 hover:bg-gray-50 rounded-lg transition text-gray-700">
+                            <i class="fas fa-user-plus w-5 text-gray-400"></i>
+                            <span class="ml-3">Add Person</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Not Found -->
+    <div x-show="!loading && !org" class="text-center py-12">
+        <i class="fas fa-exclamation-circle text-4xl text-gray-300 mb-4"></i>
+        <p class="text-gray-500">Organisation not found</p>
+        <a href="/organisations" class="text-indigo-600 hover:text-indigo-700 mt-4 inline-block">Back to list</a>
+    </div>
+</div>
+
+<script>
+function organisationShow() {
+    return {
+        org: null,
+        people: [],
+        loading: true,
+        
+        async init() {
+            const id = window.location.pathname.split('/')[2];
+            await this.loadOrg(id);
+            await this.loadPeople(id);
+            this.loading = false;
+        },
+        
+        async loadOrg(id) {
+            try {
+                const res = await api.get('/organisations/' + id + '/');
+                if (res?.ok) {
+                    const data = await res.json();
+                    this.org = data.data || data;
+                }
+            } catch (e) { console.error(e); }
+        },
+        
+        async loadPeople(orgId) {
+            try {
+                const res = await api.get('/people/?organisation_id=' + orgId);
+                if (res?.ok) {
+                    const data = await res.json();
+                    this.people = data.data || [];
+                }
+            } catch (e) { console.error(e); }
+        },
+        
+        formatDate(dateStr) {
+            if (!dateStr) return '-';
+            return new Date(dateStr).toLocaleDateString('en-US', {
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        },
+        
+        async deleteOrg() {
+            if (!confirm(`Delete "${this.org.name}"? This cannot be undone.`)) return;
+            try {
+                const res = await api.delete('/organisations/' + this.org.id + '/');
+                if (res?.ok) {
+                    window.location.href = '/organisations';
+                } else {
+                    alert('Failed to delete organisation');
+                }
+            } catch (e) { console.error(e); alert('Error deleting organisation'); }
+        }
+    }
+}
+</script>
+{% endblock %}

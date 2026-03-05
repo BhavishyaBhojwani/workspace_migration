@@ -1,0 +1,90 @@
+# ---- Global ----
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+*.swo
+*.bak
+*.env
+.env.*
+node_modules/
+.idea/
+.vscode/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.db
+*.egg-info/
+.Python
+*.coverage
+coverage/
+*.egg
+*.eggs/
+*.mypy_cache/
+*.pytest_cache/
+*.cache/
+*.tox/
+*.pdm.toml
+*.pdm.lock
+
+# ---- Django ----
+# Byte-compiled / optimized / DLL files
+**/__pycache__/
+**/*.py[cod]
+
+# Django stuff:
+media/
+staticfiles/
+static/
+local_settings.py
+*.sqlite3
+*.db
+
+# VS Code
+.vscode/
+
+# ---- Laravel ----
+/vendor/
+/node_modules/
+/public/storage
+/storage/*.key
+.env
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+.phpunit.result.cache
+/storage/app/public/
+/storage/debugbar/
+/storage/framework/
+/storage/logs/
+/.phpunit.result.cache
+
+# Composer
+composer.lock
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Others
+*.sublime-workspace
+*.sublime-project
+
+# Backup files
+*~
+*.bak
+
+# JetBrains IDEs
+.idea/
+
+# PyCharm
+*.iml
+
+# Misc
+*.orig
+
+# End of .gitignore

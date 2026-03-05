@@ -1,0 +1,2 @@
+class UserFilter:
+    pass

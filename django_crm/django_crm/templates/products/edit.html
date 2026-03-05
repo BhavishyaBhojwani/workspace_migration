@@ -1,0 +1,233 @@
+{% extends 'layouts/app.html' %}
+
+{% block nav_products %}bg-gray-700 text-white{% endblock %}
+{% block page_title %}Edit Product{% endblock %}
+
+{% block page_content %}
+<div x-data="productEdit()" x-init="init()">
+    <!-- Loading State -->
+    <div x-show="loading" class="flex justify-center py-12">
+        <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+    </div>
+    
+    <template x-if="!loading">
+        <div>
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center">
+                    <a :href="'/products/' + form.id" class="text-gray-500 hover:text-gray-700 mr-3">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <h1 class="text-2xl font-bold text-gray-800">Edit Product</h1>
+                </div>
+            </div>
+            
+            <form @submit.prevent="submit()">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">Product Information</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Name <span class="text-red-500">*</span></label>
+                            <input type="text" x-model="form.name" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Code</label>
+                            <input type="text" x-model="form.code"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Barcode</label>
+                            <input type="text" x-model="form.barcode"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                            <select x-model="form.category_id"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">Select Category</option>
+                                <template x-for="category in categories" :key="category.id">
+                                    <option :value="category.id" x-text="category.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Unit</label>
+                            <input type="text" x-model="form.unit"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Tax Rate</label>
+                            <select x-model="form.tax_rate_id"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">No Tax</option>
+                                <template x-for="rate in taxRates" :key="rate.id">
+                                    <option :value="rate.id" x-text="rate.name + ' (' + rate.rate + '%)'"></option>
+                                </template>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Default Price</label>
+                            <input type="number" x-model="form.default_price" step="0.01"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Cost Price</label>
+                            <input type="number" x-model="form.cost_price" step="0.01"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                            <textarea x-model="form.description" rows="3"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                        </div>
+                        
+                        <div class="md:col-span-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" x-model="form.active"
+                                    class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <span class="ml-2 text-sm text-gray-700">Active</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-end gap-3">
+                    <a :href="'/products/' + form.id" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                        Cancel
+                    </a>
+                    <button type="submit" :disabled="submitting"
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+                        <i class="fas fa-spinner fa-spin mr-2" x-show="submitting"></i>
+                        Update Product
+                    </button>
+                </div>
+            </form>
+        </div>
+    </template>
+</div>
+
+<script>
+function productEdit() {
+    return {
+        form: {
+            id: null,
+            name: '',
+            code: '',
+            barcode: '',
+            category_id: '',
+            unit: '',
+            tax_rate_id: '',
+            default_price: '',
+            cost_price: '',
+            description: '',
+            active: true
+        },
+        categories: [],
+        taxRates: [],
+        loading: true,
+        submitting: false,
+        
+        async init() {
+            const id = window.location.pathname.split('/')[2];
+            await Promise.all([
+                this.loadProduct(id),
+                this.loadCategories(),
+                this.loadTaxRates()
+            ]);
+        },
+        
+        async loadProduct(id) {
+            try {
+                const response = await fetch('/api/v1/products/' + id + '/', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    const p = data.data;
+                    this.form = {
+                        id: p.id,
+                        name: p.name || '',
+                        code: p.code || '',
+                        barcode: p.barcode || '',
+                        category_id: p.category_id || '',
+                        unit: p.unit || '',
+                        tax_rate_id: p.tax_rate_id || '',
+                        default_price: p.default_price ? (p.default_price / 100).toFixed(2) : '',
+                        cost_price: p.cost_price ? (p.cost_price / 100).toFixed(2) : '',
+                        description: p.description || '',
+                        active: p.active ?? true
+                    };
+                }
+            } catch (error) {
+                console.error('Error loading product:', error);
+            }
+            this.loading = false;
+        },
+        
+        async loadCategories() {
+            try {
+                const response = await fetch('/api/v1/products/categories/', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                const data = await response.json();
+                if (data.success) this.categories = data.data;
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        },
+        
+        async loadTaxRates() {
+            try {
+                const response = await fetch('/api/v1/products/tax-rates/', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                const data = await response.json();
+                if (data.success) this.taxRates = data.data;
+            } catch (error) {
+                console.error('Error loading tax rates:', error);
+            }
+        },
+        
+        async submit() {
+            this.submitting = true;
+            try {
+                const payload = {
+                    ...this.form,
+                    default_price: this.form.default_price ? Math.round(parseFloat(this.form.default_price) * 100) : null,
+                    cost_price: this.form.cost_price ? Math.round(parseFloat(this.form.cost_price) * 100) : null
+                };
+                
+                const response = await fetch('/api/v1/products/' + this.form.id + '/', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/products/' + this.form.id;
+                } else {
+                    alert(data.message || 'Error updating product');
+                }
+            } catch (error) {
+                console.error('Error updating product:', error);
+                alert('Error updating product');
+            }
+            this.submitting = false;
+        }
+    }
+}
+</script>
+{% endblock %}

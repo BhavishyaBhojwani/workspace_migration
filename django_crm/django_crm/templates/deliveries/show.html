@@ -1,0 +1,271 @@
+{% extends 'layouts/app.html' %}
+
+{% block nav_deliveries %}bg-gray-700 text-white{% endblock %}
+{% block page_title %}Delivery Details{% endblock %}
+
+{% block page_content %}
+<div x-data="deliveryShow()" x-init="init()">
+    <!-- Loading State -->
+    <div x-show="loading" class="flex justify-center py-12">
+        <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+    </div>
+    
+    <template x-if="!loading && delivery">
+        <div>
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+                <div class="flex items-center">
+                    <a href="/deliveries/" class="text-gray-500 hover:text-gray-700 mr-3">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800" x-text="delivery.delivery_id"></h1>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 mt-4 sm:mt-0">
+                    <span class="px-3 py-1 text-sm rounded-full" :class="getStatusClass()" x-text="getStatusText()"></span>
+                    <a :href="'/deliveries/' + delivery.id + '/edit'" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-edit mr-2"></i> Edit
+                    </a>
+                    <button @click="markAsShipped()" x-show="!delivery.shipped_on" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-shipping-fast mr-2"></i> Mark Shipped
+                    </button>
+                    <button @click="markAsDelivered()" x-show="delivery.shipped_on && !delivery.delivered_on" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                        <i class="fas fa-check mr-2"></i> Mark Delivered
+                    </button>
+                    <button @click="deleteDelivery()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        <i class="fas fa-trash mr-2"></i> Delete
+                    </button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Main Details -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Delivery Info -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Delivery Information</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-500">Delivery ID</p>
+                                <p class="font-medium" x-text="delivery.delivery_id"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Tracking Number</p>
+                                <p class="font-medium" x-text="delivery.tracking_number || '-'"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Initiated</p>
+                                <p class="font-medium" x-text="formatDate(delivery.delivery_initiated)"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Shipped</p>
+                                <p class="font-medium" x-text="formatDate(delivery.shipped_on)"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Expected</p>
+                                <p class="font-medium" x-text="formatDate(delivery.expected_on)"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Delivered</p>
+                                <p class="font-medium text-green-600" x-text="formatDate(delivery.delivered_on)"></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Products -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" x-show="delivery.products && delivery.products.length > 0">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Products</h2>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full">
+                                <thead>
+                                    <tr class="border-b border-gray-200">
+                                        <th class="text-left py-2 text-sm font-medium text-gray-500">Product</th>
+                                        <th class="text-right py-2 text-sm font-medium text-gray-500">Quantity</th>
+                                        <th class="text-left py-2 text-sm font-medium text-gray-500">Comments</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="product in delivery.products" :key="product.id">
+                                        <tr class="border-b border-gray-100">
+                                            <td class="py-3" x-text="product.product_name || 'Product'"></td>
+                                            <td class="py-3 text-right" x-text="product.quantity"></td>
+                                            <td class="py-3 text-gray-500" x-text="product.comments || '-'"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Notes -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" x-show="delivery.notes">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Notes</h2>
+                        <p class="text-gray-700 whitespace-pre-wrap" x-text="delivery.notes"></p>
+                    </div>
+                </div>
+                
+                <!-- Sidebar -->
+                <div class="space-y-6">
+                    <!-- Status Card -->
+                    <div :class="delivery.delivered_on ? 'bg-green-600' : delivery.shipped_on ? 'bg-blue-600' : 'bg-yellow-500'" class="rounded-xl shadow-sm p-6 text-white">
+                        <p class="text-white/80">Status</p>
+                        <p class="text-2xl font-bold" x-text="getStatusText()"></p>
+                    </div>
+                    
+                    <!-- Related Order -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" x-show="delivery.order_id">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Related Order</h2>
+                        <a :href="'/orders/' + delivery.order_id" class="text-indigo-600 hover:text-indigo-800 flex items-center">
+                            <i class="fas fa-shopping-cart mr-2"></i>
+                            <span x-text="delivery.order?.order_id || 'View Order'"></span>
+                        </a>
+                    </div>
+                    
+                    <!-- Timeline -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Timeline</h2>
+                        <div class="space-y-4">
+                            <div class="flex items-start" x-show="delivery.delivery_initiated">
+                                <div class="bg-blue-100 rounded-full p-2 mr-3">
+                                    <i class="fas fa-clock text-blue-600 text-sm"></i>
+                                </div>
+                                <div>
+                                    <p class="font-medium">Initiated</p>
+                                    <p class="text-gray-500 text-sm" x-text="formatDate(delivery.delivery_initiated)"></p>
+                                </div>
+                            </div>
+                            <div class="flex items-start" x-show="delivery.shipped_on">
+                                <div class="bg-blue-100 rounded-full p-2 mr-3">
+                                    <i class="fas fa-shipping-fast text-blue-600 text-sm"></i>
+                                </div>
+                                <div>
+                                    <p class="font-medium">Shipped</p>
+                                    <p class="text-gray-500 text-sm" x-text="formatDate(delivery.shipped_on)"></p>
+                                </div>
+                            </div>
+                            <div class="flex items-start" x-show="delivery.delivered_on">
+                                <div class="bg-green-100 rounded-full p-2 mr-3">
+                                    <i class="fas fa-check text-green-600 text-sm"></i>
+                                </div>
+                                <div>
+                                    <p class="font-medium">Delivered</p>
+                                    <p class="text-gray-500 text-sm" x-text="formatDate(delivery.delivered_on)"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+
+<script>
+function deliveryShow() {
+    return {
+        delivery: null,
+        loading: true,
+        
+        async init() {
+            const id = window.location.pathname.split('/')[2];
+            await this.loadDelivery(id);
+        },
+        
+        async loadDelivery(id) {
+            this.loading = true;
+            try {
+                const response = await fetch('/api/v1/sales/deliveries/' + id + '/', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.delivery = data.data;
+                }
+            } catch (error) {
+                console.error('Error loading delivery:', error);
+            }
+            this.loading = false;
+        },
+        
+        async markAsShipped() {
+            if (!confirm('Mark this delivery as shipped?')) return;
+            try {
+                const response = await fetch('/api/v1/sales/deliveries/' + this.delivery.id + '/', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    },
+                    body: JSON.stringify({ shipped_on: new Date().toISOString().split('T')[0] })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.delivery = data.data;
+                }
+            } catch (error) {
+                console.error('Error marking as shipped:', error);
+            }
+        },
+        
+        async markAsDelivered() {
+            if (!confirm('Mark this delivery as delivered?')) return;
+            try {
+                const response = await fetch('/api/v1/sales/deliveries/' + this.delivery.id + '/', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    },
+                    body: JSON.stringify({ delivered_on: new Date().toISOString().split('T')[0] })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.delivery = data.data;
+                }
+            } catch (error) {
+                console.error('Error marking as delivered:', error);
+            }
+        },
+        
+        async deleteDelivery() {
+            if (!confirm('Delete this delivery?')) return;
+            try {
+                const response = await fetch('/api/v1/sales/deliveries/' + this.delivery.id + '/', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/deliveries/';
+                }
+            } catch (error) {
+                console.error('Error deleting delivery:', error);
+            }
+        },
+        
+        getStatusText() {
+            if (this.delivery.delivered_on) return 'Delivered';
+            if (this.delivery.shipped_on) return 'Shipped';
+            return 'Pending';
+        },
+        
+        getStatusClass() {
+            const status = this.getStatusText().toLowerCase();
+            if (status === 'delivered') return 'bg-green-100 text-green-800';
+            if (status === 'shipped') return 'bg-blue-100 text-blue-800';
+            return 'bg-yellow-100 text-yellow-800';
+        },
+        
+        formatDate(dateString) {
+            if (!dateString) return '-';
+            return new Date(dateString).toLocaleDateString();
+        }
+    }
+}
+</script>
+{% endblock %}

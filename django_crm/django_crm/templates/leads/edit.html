@@ -1,0 +1,334 @@
+{% extends 'layouts/app.html' %}
+
+{% block nav_leads %}bg-gray-700 text-white{% endblock %}
+{% block page_title %}Edit Lead{% endblock %}
+
+{% block page_content %}
+<div x-data="leadEdit()" x-init="init()">
+    <!-- Loading State -->
+    <div x-show="loading" class="flex justify-center py-12">
+        <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+    </div>
+    
+    <!-- Form -->
+    <div x-show="!loading">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center">
+                <a :href="'/leads/' + leadId" class="text-gray-500 hover:text-gray-700 mr-4">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <h1 class="text-2xl font-bold text-gray-800">Edit Lead</h1>
+            </div>
+        </div>
+        
+        <form @submit.prevent="submit()" class="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div class="p-6 space-y-6">
+                <!-- Error Display -->
+                <div x-show="errorMsg" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                    <p x-text="errorMsg"></p>
+                </div>
+                
+                <!-- Basic Information -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Lead Information</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                            <input type="text" x-model="form.title" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Lead Status</label>
+                            <select x-model="form.lead_status_id"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">-- Select Status --</option>
+                                <template x-for="status in leadStatuses" :key="status.id">
+                                    <option :value="status.id" x-text="status.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Lead Source</label>
+                            <select x-model="form.lead_source_id"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">-- Select Source --</option>
+                                <template x-for="source in leadSources" :key="source.id">
+                                    <option :value="source.id" x-text="source.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Associations -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Associations</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Person</label>
+                            <select x-model="form.person_id"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">-- Select Person --</option>
+                                <template x-for="person in people" :key="person.id">
+                                    <option :value="person.id" x-text="person.first_name + ' ' + person.last_name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Organisation</label>
+                            <select x-model="form.organisation_id"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">-- Select Organisation --</option>
+                                <template x-for="org in organisations" :key="org.id">
+                                    <option :value="org.id" x-text="org.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Pipeline and Value -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Pipeline & Value</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Pipeline</label>
+                            <select x-model="form.pipeline_id" @change="loadPipelineStages()"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">-- Select Pipeline --</option>
+                                <template x-for="pipeline in pipelines" :key="pipeline.id">
+                                    <option :value="pipeline.id" x-text="pipeline.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Pipeline Stage</label>
+                            <select x-model="form.pipeline_stage_id"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">-- Select Stage --</option>
+                                <template x-for="stage in pipelineStages" :key="stage.id">
+                                    <option :value="stage.id" x-text="stage.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                            <input type="number" x-model="form.amount" step="0.01" min="0"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+                            <select x-model="form.currency"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                                <option value="GBP">GBP</option>
+                                <option value="INR">INR</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Description -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea x-model="form.description" rows="3"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="px-4 sm:px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 rounded-b-xl">
+                <a :href="'/leads/' + leadId" class="w-full sm:w-auto text-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition">
+                    Cancel
+                </a>
+                <button type="submit" :disabled="submitting"
+                    class="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50">
+                    <i x-show="submitting" class="fas fa-spinner fa-spin mr-2"></i>
+                    <span x-text="submitting ? 'Saving...' : 'Update Lead'"></span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function leadEdit() {
+    return {
+        leadId: null,
+        form: {
+            title: '', description: '',
+            lead_status_id: '', lead_source_id: '',
+            person_id: '', organisation_id: '',
+            pipeline_id: '', pipeline_stage_id: '',
+            amount: '', currency: 'USD'
+        },
+        leadStatuses: [],
+        leadSources: [],
+        people: [],
+        organisations: [],
+        pipelines: [],
+        pipelineStages: [],
+        loading: true,
+        submitting: false,
+        errorMsg: '',
+        
+        async init() {
+            const token = localStorage.getItem('access_token');
+            if (!token) { window.location.href = '/login'; return; }
+            
+            // Extract ID from URL
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            this.leadId = pathParts[pathParts.length - 2]; // e.g. /leads/123/edit/
+            
+            // Load dropdown data and lead in parallel
+            await Promise.all([
+                this.loadLeadStatuses(),
+                this.loadLeadSources(),
+                this.loadPeople(),
+                this.loadOrganisations(),
+                this.loadPipelines(),
+                this.loadLead()
+            ]);
+            
+            this.loading = false;
+        },
+        
+        async loadLead() {
+            try {
+                const res = await fetch(`/api/v1/crm/leads/${this.leadId}/`, {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                if (res.ok) {
+                    const lead = await res.json();
+                    this.form = {
+                        title: lead.title || '',
+                        description: lead.description || '',
+                        lead_status_id: lead.lead_status_id || '',
+                        lead_source_id: lead.lead_source_id || '',
+                        person_id: lead.person_id || '',
+                        organisation_id: lead.organisation_id || '',
+                        pipeline_id: lead.pipeline_id || '',
+                        pipeline_stage_id: lead.pipeline_stage_id || '',
+                        amount: lead.amount_display || '',
+                        currency: lead.currency || 'USD'
+                    };
+                    
+                    // Load stages for selected pipeline
+                    if (this.form.pipeline_id) {
+                        await this.loadPipelineStages();
+                    }
+                }
+            } catch (e) { console.error('Error loading lead:', e); }
+        },
+        
+        async loadLeadStatuses() {
+            try {
+                const res = await fetch('/api/v1/crm/lead-statuses/', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                if (res.ok) this.leadStatuses = (await res.json()).results || [];
+            } catch (e) {}
+        },
+        
+        async loadLeadSources() {
+            try {
+                const res = await fetch('/api/v1/crm/lead-sources/', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                if (res.ok) this.leadSources = (await res.json()).results || [];
+            } catch (e) {}
+        },
+        
+        async loadPeople() {
+            try {
+                const res = await fetch('/api/v1/crm/people/', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                if (res.ok) this.people = (await res.json()).results || [];
+            } catch (e) {}
+        },
+        
+        async loadOrganisations() {
+            try {
+                const res = await fetch('/api/v1/crm/organisations/', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                if (res.ok) this.organisations = (await res.json()).results || [];
+            } catch (e) {}
+        },
+        
+        async loadPipelines() {
+            try {
+                const res = await fetch('/api/v1/crm/pipelines/', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                if (res.ok) this.pipelines = (await res.json()).results || [];
+            } catch (e) {}
+        },
+        
+        async loadPipelineStages() {
+            const currentStageId = this.form.pipeline_stage_id;
+            this.pipelineStages = [];
+            if (!this.form.pipeline_id) {
+                this.form.pipeline_stage_id = '';
+                return;
+            }
+            
+            try {
+                const res = await fetch(`/api/v1/crm/pipeline-stages/?pipeline_id=${this.form.pipeline_id}`, {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                if (res.ok) {
+                    this.pipelineStages = (await res.json()).results || [];
+                    // Retain selected stage if it belongs to this pipeline
+                    const stageExists = this.pipelineStages.find(s => s.id == currentStageId);
+                    if (!stageExists) this.form.pipeline_stage_id = '';
+                }
+            } catch (e) {}
+        },
+        
+        async submit() {
+            this.submitting = true;
+            this.errorMsg = '';
+            
+            try {
+                const payload = {
+                    title: this.form.title,
+                    description: this.form.description || null,
+                    lead_status_id: this.form.lead_status_id || null,
+                    lead_source_id: this.form.lead_source_id || null,
+                    person_id: this.form.person_id || null,
+                    organisation_id: this.form.organisation_id || null,
+                    pipeline_id: this.form.pipeline_id || null,
+                    pipeline_stage_id: this.form.pipeline_stage_id || null,
+                    amount: this.form.amount ? parseFloat(this.form.amount) : null,
+                    currency: this.form.currency
+                };
+                
+                const res = await fetch(`/api/v1/crm/leads/${this.leadId}/`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.ok) {
+                    window.location.href = `/leads/${this.leadId}/`;
+                } else {
+                    const data = await res.json();
+                    this.errorMsg = data.detail || Object.values(data).flat().join(', ') || 'Failed to update lead';
+                }
+            } catch (e) {
+                this.errorMsg = 'Network error. Please try again.';
+            } finally {
+                this.submitting = false;
+            }
+        }
+    };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,262 @@
+{% extends 'layouts/app.html' %}
+
+{% block nav_orders %}bg-gray-700 text-white{% endblock %}
+{% block page_title %}Order Details{% endblock %}
+
+{% block page_content %}
+<div x-data="orderShow()" x-init="init()">
+    <!-- Loading State -->
+    <div x-show="loading" class="flex justify-center py-12">
+        <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+    </div>
+    
+    <template x-if="!loading && order">
+        <div>
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+                <div class="flex items-center">
+                    <a href="/orders/" class="text-gray-500 hover:text-gray-700 mr-3">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800" x-text="order.order_id"></h1>
+                        <p class="text-gray-500" x-text="order.reference"></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 mt-4 sm:mt-0">
+                    <a :href="'/orders/' + order.id + '/edit'" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-edit mr-2"></i> Edit
+                    </a>
+                    <button @click="createInvoice()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                        <i class="fas fa-file-invoice mr-2"></i> Create Invoice
+                    </button>
+                    <button @click="deleteOrder()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        <i class="fas fa-trash mr-2"></i> Delete
+                    </button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Main Details -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Order Info -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Order Information</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-500">Order ID</p>
+                                <p class="font-medium" x-text="order.order_id"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Reference</p>
+                                <p class="font-medium" x-text="order.reference || '-'"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Currency</p>
+                                <p class="font-medium" x-text="order.currency"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Stage</p>
+                                <p class="font-medium" x-text="order.pipeline_stage_name || '-'"></p>
+                            </div>
+                        </div>
+                        <div class="mt-4" x-show="order.description">
+                            <p class="text-sm text-gray-500">Description</p>
+                            <p class="font-medium" x-text="order.description"></p>
+                        </div>
+                    </div>
+                    
+                    <!-- Products -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Products</h2>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full">
+                                <thead>
+                                    <tr class="border-b border-gray-200">
+                                        <th class="text-left py-2 text-sm font-medium text-gray-500">Product</th>
+                                        <th class="text-right py-2 text-sm font-medium text-gray-500">Price</th>
+                                        <th class="text-right py-2 text-sm font-medium text-gray-500">Qty</th>
+                                        <th class="text-right py-2 text-sm font-medium text-gray-500">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="product in order.products" :key="product.id">
+                                        <tr class="border-b border-gray-100">
+                                            <td class="py-3" x-text="product.product_name || 'Product'"></td>
+                                            <td class="py-3 text-right" x-text="formatCurrency(product.price)"></td>
+                                            <td class="py-3 text-right" x-text="product.quantity"></td>
+                                            <td class="py-3 text-right font-medium" x-text="formatCurrency(product.amount)"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="border-t border-gray-200">
+                                        <td colspan="3" class="py-2 text-right text-gray-500">Subtotal:</td>
+                                        <td class="py-2 text-right font-medium" x-text="formatCurrency(order.subtotal)"></td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3" class="py-2 text-right text-gray-500">Tax:</td>
+                                        <td class="py-2 text-right font-medium" x-text="formatCurrency(order.tax)"></td>
+                                    </tr>
+                                    <tr class="text-lg">
+                                        <td colspan="3" class="py-2 text-right font-bold">Total:</td>
+                                        <td class="py-2 text-right font-bold" x-text="formatCurrency(order.total)"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Terms -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" x-show="order.terms">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Terms & Conditions</h2>
+                        <p class="text-gray-700 whitespace-pre-wrap" x-text="order.terms"></p>
+                    </div>
+                </div>
+                
+                <!-- Sidebar -->
+                <div class="space-y-6">
+                    <!-- Total Card -->
+                    <div class="bg-indigo-600 rounded-xl shadow-sm p-6 text-white">
+                        <p class="text-indigo-200">Total Amount</p>
+                        <p class="text-3xl font-bold" x-text="formatCurrency(order.total)"></p>
+                    </div>
+                    
+                    <!-- Contact -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Contact</h2>
+                        <div class="space-y-3">
+                            <div class="flex items-center" x-show="order.person_name">
+                                <i class="fas fa-user w-8 text-gray-400"></i>
+                                <a :href="'/people/' + order.person_id" class="text-indigo-600 hover:text-indigo-800" x-text="order.person_name"></a>
+                            </div>
+                            <div class="flex items-center" x-show="order.organisation_name">
+                                <i class="fas fa-building w-8 text-gray-400"></i>
+                                <a :href="'/organisations/' + order.organisation_id" class="text-indigo-600 hover:text-indigo-800" x-text="order.organisation_name"></a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Related -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Related</h2>
+                        <div class="space-y-3">
+                            <div class="flex items-center" x-show="order.quote_id">
+                                <i class="fas fa-file-alt w-8 text-gray-400"></i>
+                                <a :href="'/quotes/' + order.quote_id" class="text-indigo-600 hover:text-indigo-800">Quote</a>
+                            </div>
+                            <div class="flex items-center" x-show="order.deal_id">
+                                <i class="fas fa-handshake w-8 text-gray-400"></i>
+                                <a :href="'/deals/' + order.deal_id" class="text-indigo-600 hover:text-indigo-800">Deal</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Timeline -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Timeline</h2>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Created</span>
+                                <span class="font-medium" x-text="formatDateTime(order.created_at)"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Updated</span>
+                                <span class="font-medium" x-text="formatDateTime(order.updated_at)"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+
+<script>
+function orderShow() {
+    return {
+        order: null,
+        loading: true,
+        
+        async init() {
+            const id = window.location.pathname.split('/')[2];
+            await this.loadOrder(id);
+        },
+        
+        async loadOrder(id) {
+            this.loading = true;
+            try {
+                const response = await fetch('/api/v1/sales/orders/' + id + '/', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.order = data.data;
+                }
+            } catch (error) {
+                console.error('Error loading order:', error);
+            }
+            this.loading = false;
+        },
+        
+        async createInvoice() {
+            if (!confirm('Create invoice from this order?')) return;
+            try {
+                const response = await fetch('/api/v1/sales/orders/' + this.order.id + '/create-invoice/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/invoices/' + data.data.id;
+                } else {
+                    alert(data.message || 'Error creating invoice');
+                }
+            } catch (error) {
+                console.error('Error creating invoice:', error);
+            }
+        },
+        
+        async deleteOrder() {
+            if (!confirm('Delete this order?')) return;
+            try {
+                const response = await fetch('/api/v1/sales/orders/' + this.order.id + '/', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/orders/';
+                }
+            } catch (error) {
+                console.error('Error deleting order:', error);
+            }
+        },
+        
+        formatDate(dateString) {
+            if (!dateString) return '-';
+            return new Date(dateString).toLocaleDateString();
+        },
+        
+        formatDateTime(dateString) {
+            if (!dateString) return '-';
+            return new Date(dateString).toLocaleString();
+        },
+        
+        formatCurrency(amount) {
+            if (amount === null || amount === undefined) return '-';
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: this.order?.currency || 'USD'
+            }).format(amount / 100);
+        }
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,2 @@
+class SalesFilter:
+    pass

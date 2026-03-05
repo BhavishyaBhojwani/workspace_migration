@@ -1,0 +1,168 @@
+{% extends 'layouts/app.html' %}
+
+{% block nav_users %}bg-gray-700 text-white{% endblock %}
+{% block page_title %}User Details{% endblock %}
+
+{% block page_content %}
+<div x-data="userShow()" x-init="init()">
+    <!-- Loading State -->
+    <div x-show="loading" class="flex justify-center py-12">
+        <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+    </div>
+    
+    <template x-if="!loading && user">
+        <div>
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+                <div class="flex items-center">
+                    <a href="/users/" class="text-gray-500 hover:text-gray-700 mr-3">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
+                            <span class="text-indigo-600 text-lg font-medium" x-text="getInitials()"></span>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-800" x-text="user.name"></h1>
+                            <p class="text-gray-500" x-text="user.email"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 mt-4 sm:mt-0">
+                    <span class="px-3 py-1 text-sm rounded-full" 
+                        :class="user.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
+                        x-text="user.is_active ? 'Active' : 'Inactive'"></span>
+                    <a :href="'/users/' + user.id + '/edit'" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-edit mr-2"></i> Edit
+                    </a>
+                    <button @click="deleteUser()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        <i class="fas fa-trash mr-2"></i> Delete
+                    </button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Main Details -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- User Info -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">User Information</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-500">Name</p>
+                                <p class="font-medium" x-text="user.name"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Email</p>
+                                <p class="font-medium" x-text="user.email"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Role</p>
+                                <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800" x-text="user.role || '-'"></span>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Team</p>
+                                <p class="font-medium" x-text="user.team_name || '-'"></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Permissions -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" x-show="user.permissions && user.permissions.length > 0">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Permissions</h2>
+                        <div class="flex flex-wrap gap-2">
+                            <template x-for="perm in user.permissions" :key="perm">
+                                <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700" x-text="perm"></span>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sidebar -->
+                <div class="space-y-6">
+                    <!-- Status Card -->
+                    <div :class="user.is_active ? 'bg-green-600' : 'bg-gray-500'" class="rounded-xl shadow-sm p-6 text-white">
+                        <p class="text-white/80">Account Status</p>
+                        <p class="text-2xl font-bold" x-text="user.is_active ? 'Active' : 'Inactive'"></p>
+                    </div>
+                    
+                    <!-- Timeline -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Timeline</h2>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Created</span>
+                                <span class="font-medium" x-text="formatDateTime(user.created_at)"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Last Login</span>
+                                <span class="font-medium" x-text="formatDateTime(user.last_login)"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+
+<script>
+function userShow() {
+    return {
+        user: null,
+        loading: true,
+        
+        async init() {
+            const id = window.location.pathname.split('/')[2];
+            await this.loadUser(id);
+        },
+        
+        async loadUser(id) {
+            this.loading = true;
+            try {
+                const response = await fetch('/api/v1/accounts/users/' + id + '/', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.user = data.data;
+                }
+            } catch (error) {
+                console.error('Error loading user:', error);
+            }
+            this.loading = false;
+        },
+        
+        async deleteUser() {
+            if (!confirm('Delete this user?')) return;
+            try {
+                const response = await fetch('/api/v1/accounts/users/' + this.user.id + '/', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/users/';
+                }
+            } catch (error) {
+                console.error('Error deleting user:', error);
+            }
+        },
+        
+        getInitials() {
+            const name = this.user?.name || this.user?.email || '';
+            return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+        },
+        
+        formatDateTime(dateString) {
+            if (!dateString) return '-';
+            return new Date(dateString).toLocaleString();
+        }
+    }
+}
+</script>
+{% endblock %}

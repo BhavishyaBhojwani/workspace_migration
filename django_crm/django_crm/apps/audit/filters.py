@@ -1,0 +1,2 @@
+class AuditFilter:
+    pass

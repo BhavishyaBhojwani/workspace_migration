@@ -1,0 +1,248 @@
+{% extends 'layouts/app.html' %}
+
+{% block nav_people %}bg-gray-700 text-white{% endblock %}
+{% block page_title %}Person Details{% endblock %}
+
+{% block page_content %}
+<div x-data="personShow()" x-init="init()">
+    <!-- Loading -->
+    <div x-show="loading" class="flex justify-center py-12">
+        <i class="fas fa-spinner fa-spin text-3xl text-green-600"></i>
+    </div>
+    
+    <!-- Content -->
+    <div x-show="!loading && person">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+            <div class="flex items-center">
+                <a href="/people" class="text-gray-500 hover:text-gray-700 mr-4">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                        <span class="text-green-600 font-bold text-lg" 
+                            x-text="(person.first_name?.charAt(0) || '') + (person.last_name?.charAt(0) || '')"></span>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800" x-text="person.first_name + ' ' + person.last_name"></h1>
+                        <p class="text-gray-500 mt-1" x-text="person.title || 'Person'"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 mt-4 sm:mt-0">
+                <a :href="'/people/' + person.id + '/edit'" 
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition">
+                    <i class="fas fa-edit mr-2"></i> Edit
+                </a>
+                <button @click="deletePerson()"
+                    class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                    <i class="fas fa-trash mr-2"></i> Delete
+                </button>
+            </div>
+        </div>
+        
+        <!-- Details Cards -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Main Info -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-800">Details</h3>
+                    </div>
+                    <div class="p-6">
+                        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">First Name</dt>
+                                <dd class="mt-1 text-gray-800" x-text="person.first_name || '-'"></dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Last Name</dt>
+                                <dd class="mt-1 text-gray-800" x-text="person.last_name || '-'"></dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Title</dt>
+                                <dd class="mt-1 text-gray-800" x-text="person.title || '-'"></dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Organisation</dt>
+                                <dd class="mt-1">
+                                    <template x-if="person.organisation">
+                                        <a :href="'/organisations/' + person.organisation.id" 
+                                            class="text-indigo-600 hover:text-indigo-800" x-text="person.organisation.name"></a>
+                                    </template>
+                                    <template x-if="!person.organisation">
+                                        <span class="text-gray-400">-</span>
+                                    </template>
+                                </dd>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <dt class="text-sm font-medium text-gray-500">Description</dt>
+                                <dd class="mt-1 text-gray-800" x-text="person.description || '-'"></dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+                
+                <!-- Contact Info -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-800">Contact Information</h3>
+                    </div>
+                    <div class="p-6">
+                        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Email</dt>
+                                <dd class="mt-1">
+                                    <template x-if="person.email">
+                                        <a :href="'mailto:' + person.email" class="text-green-600 hover:text-green-800" x-text="person.email"></a>
+                                    </template>
+                                    <template x-if="!person.email">
+                                        <span class="text-gray-400">-</span>
+                                    </template>
+                                </dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Phone</dt>
+                                <dd class="mt-1">
+                                    <template x-if="person.phone">
+                                        <a :href="'tel:' + person.phone" class="text-green-600 hover:text-green-800" x-text="person.phone"></a>
+                                    </template>
+                                    <template x-if="!person.phone">
+                                        <span class="text-gray-400">-</span>
+                                    </template>
+                                </dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+                
+                <!-- Address Card -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-800">Address</h3>
+                    </div>
+                    <div class="p-6">
+                        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Address Line 1</dt>
+                                <dd class="mt-1 text-gray-800" x-text="person.address_line_1 || '-'"></dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Address Line 2</dt>
+                                <dd class="mt-1 text-gray-800" x-text="person.address_line_2 || '-'"></dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">City</dt>
+                                <dd class="mt-1 text-gray-800" x-text="person.city || '-'"></dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">State/Province</dt>
+                                <dd class="mt-1 text-gray-800" x-text="person.state || '-'"></dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Postcode</dt>
+                                <dd class="mt-1 text-gray-800" x-text="person.postcode || '-'"></dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Country</dt>
+                                <dd class="mt-1 text-gray-800" x-text="person.country || '-'"></dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sidebar -->
+            <div class="space-y-6">
+                <!-- Contact Card -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h4 class="text-sm font-semibold text-gray-800 mb-4">Quick Contact</h4>
+                    <div class="space-y-3">
+                        <template x-if="person.email">
+                            <a :href="'mailto:' + person.email" 
+                                class="flex items-center p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition text-gray-700">
+                                <i class="fas fa-envelope w-5 text-gray-400"></i>
+                                <span class="ml-3 truncate" x-text="person.email"></span>
+                            </a>
+                        </template>
+                        <template x-if="person.phone">
+                            <a :href="'tel:' + person.phone" 
+                                class="flex items-center p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition text-gray-700">
+                                <i class="fas fa-phone w-5 text-gray-400"></i>
+                                <span class="ml-3" x-text="person.phone"></span>
+                            </a>
+                        </template>
+                    </div>
+                </div>
+                
+                <!-- Created Info -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h4 class="text-sm font-semibold text-gray-800 mb-4">Timeline</h4>
+                    <div class="space-y-3 text-sm">
+                        <div>
+                            <span class="text-gray-500">Created:</span>
+                            <span class="text-gray-800 ml-2" x-text="formatDate(person.created_at)"></span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Updated:</span>
+                            <span class="text-gray-800 ml-2" x-text="formatDate(person.updated_at)"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Not Found -->
+    <div x-show="!loading && !person" class="text-center py-12">
+        <i class="fas fa-exclamation-circle text-4xl text-gray-300 mb-4"></i>
+        <p class="text-gray-500">Person not found</p>
+        <a href="/people" class="text-green-600 hover:text-green-700 mt-4 inline-block">Back to list</a>
+    </div>
+</div>
+
+<script>
+function personShow() {
+    return {
+        person: null,
+        loading: true,
+        
+        async init() {
+            const id = window.location.pathname.split('/')[2];
+            await this.loadPerson(id);
+            this.loading = false;
+        },
+        
+        async loadPerson(id) {
+            try {
+                const res = await api.get('/people/' + id + '/');
+                if (res?.ok) {
+                    const data = await res.json();
+                    this.person = data.data || data;
+                }
+            } catch (e) { console.error(e); }
+        },
+        
+        formatDate(dateStr) {
+            if (!dateStr) return '-';
+            return new Date(dateStr).toLocaleDateString('en-US', {
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        },
+        
+        async deletePerson() {
+            if (!confirm(`Delete "${this.person.first_name} ${this.person.last_name}"? This cannot be undone.`)) return;
+            try {
+                const res = await api.delete('/people/' + this.person.id + '/');
+                if (res?.ok) {
+                    window.location.href = '/people';
+                } else {
+                    alert('Failed to delete person');
+                }
+            } catch (e) { console.error(e); alert('Error deleting person'); }
+        }
+    }
+}
+</script>
+{% endblock %}

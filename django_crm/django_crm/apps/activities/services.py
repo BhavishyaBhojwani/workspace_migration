@@ -1,0 +1,2 @@
+class ActivitiesService:
+    pass

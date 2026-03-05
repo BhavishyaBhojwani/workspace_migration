@@ -1,0 +1,241 @@
+{% extends 'layouts/app.html' %}
+
+{% block nav_people %}bg-gray-700 text-white{% endblock %}
+{% block page_title %}People{% endblock %}
+
+{% block page_content %}
+<div x-data="peopleIndex()" x-init="init()">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">People</h1>
+        <a href="/people/create" class="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+            <i class="fas fa-plus mr-2"></i>
+            Add Person
+        </a>
+    </div>
+    
+    <!-- Search and Filters -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+        <div class="flex flex-col md:flex-row md:items-center gap-4">
+            <div class="flex-1">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" x-model="search" @input.debounce.300ms="loadData()"
+                        placeholder="Search people..."
+                        class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <select x-model="perPage" @change="loadData()"
+                    class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500">
+                    <option value="10">10 per page</option>
+                    <option value="25">25 per page</option>
+                    <option value="50">50 per page</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading State -->
+    <div x-show="loading" class="flex justify-center py-12">
+        <i class="fas fa-spinner fa-spin text-3xl text-green-600"></i>
+    </div>
+    
+    <!-- Empty State -->
+    <template x-if="!loading && people.length === 0">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <i class="fas fa-users text-5xl text-gray-300 mb-4"></i>
+            <p class="text-gray-500 text-lg">No people found</p>
+            <a href="/people/create" class="mt-4 inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                <i class="fas fa-plus mr-2"></i> Add Person
+            </a>
+        </div>
+    </template>
+
+    <!-- Mobile Cards (visible on small screens) -->
+    <div x-show="!loading && people.length > 0" class="md:hidden space-y-4">
+        <template x-for="person in people" :key="person.id">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                <div class="flex items-start gap-3">
+                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span class="text-green-600 font-semibold" 
+                            x-text="(person.first_name?.charAt(0) || '') + (person.last_name?.charAt(0) || '')"></span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <a :href="'/people/' + person.id" class="text-green-600 hover:text-green-800 font-semibold" 
+                                    x-text="person.first_name + ' ' + person.last_name"></a>
+                                <p class="text-sm text-gray-500" x-text="person.title || ''"></p>
+                            </div>
+                            <div class="flex items-center gap-1 flex-shrink-0">
+                                <a :href="'/people/' + person.id" class="p-2 text-gray-500 hover:text-green-600">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a :href="'/people/' + person.id + '/edit'" class="p-2 text-gray-500 hover:text-blue-600">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button @click="deletePerson(person)" class="p-2 text-gray-500 hover:text-red-600">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-2 space-y-1 text-sm">
+                            <div class="flex items-center" x-show="person.email">
+                                <i class="fas fa-envelope w-5 text-gray-400"></i>
+                                <span class="text-gray-600 ml-2 truncate" x-text="person.email"></span>
+                            </div>
+                            <div class="flex items-center" x-show="person.phone">
+                                <i class="fas fa-phone w-5 text-gray-400"></i>
+                                <span class="text-gray-600 ml-2" x-text="person.phone"></span>
+                            </div>
+                            <template x-if="person.organisation">
+                                <div class="flex items-center">
+                                    <i class="fas fa-building w-5 text-gray-400"></i>
+                                    <a :href="'/organisations/' + person.organisation.id" 
+                                        class="text-indigo-600 hover:text-indigo-800 ml-2 truncate" x-text="person.organisation.name"></a>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+    
+    <!-- Desktop Table (hidden on small screens) -->
+    <div x-show="!loading && people.length > 0" class="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organisation</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <template x-for="person in people" :key="person.id">
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                        <span class="text-green-600 font-medium" 
+                                            x-text="(person.first_name?.charAt(0) || '') + (person.last_name?.charAt(0) || '')"></span>
+                                    </div>
+                                    <div class="ml-3">
+                                        <a :href="'/people/' + person.id" class="text-green-600 hover:text-green-800 font-medium" 
+                                            x-text="person.first_name + ' ' + person.last_name"></a>
+                                        <p class="text-sm text-gray-500" x-text="person.title || ''"></p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-gray-600" x-text="person.email || '-'"></td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <template x-if="person.organisation">
+                                    <a :href="'/organisations/' + person.organisation.id" 
+                                        class="text-indigo-600 hover:text-indigo-800" x-text="person.organisation.name"></a>
+                                </template>
+                                <template x-if="!person.organisation">
+                                    <span class="text-gray-400">-</span>
+                                </template>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-gray-600" x-text="person.phone || '-'"></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right">
+                                <div class="flex items-center justify-end gap-2">
+                                    <a :href="'/people/' + person.id" class="p-2 text-gray-500 hover:text-green-600" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a :href="'/people/' + person.id + '/edit'" class="p-2 text-gray-500 hover:text-blue-600" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button @click="deletePerson(person)" class="p-2 text-gray-500 hover:text-red-600" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    <div x-show="!loading && meta.last_page > 1" class="mt-4 bg-white rounded-xl shadow-sm border border-gray-200 px-4 py-3">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p class="text-sm text-gray-600 text-center sm:text-left">
+                Showing <span x-text="meta.from || 0"></span> to <span x-text="meta.to || 0"></span> of <span x-text="meta.total || 0"></span>
+            </p>
+            <div class="flex items-center justify-center gap-2">
+                <button @click="goToPage(meta.current_page - 1)" :disabled="meta.current_page <= 1"
+                    class="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <span class="px-3 py-2 text-sm font-medium" x-text="meta.current_page + ' / ' + meta.last_page"></span>
+                <button @click="goToPage(meta.current_page + 1)" :disabled="meta.current_page >= meta.last_page"
+                    class="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function peopleIndex() {
+    return {
+        people: [],
+        loading: true,
+        search: '',
+        perPage: 10,
+        page: 1,
+        meta: {},
+        
+        async init() {
+            await this.loadData();
+        },
+        
+        async loadData() {
+            this.loading = true;
+            try {
+                const params = new URLSearchParams({
+                    page: this.page,
+                    per_page: this.perPage
+                });
+                if (this.search) params.append('search', this.search);
+                
+                const res = await api.get('/people/?' + params.toString());
+                if (res?.ok) {
+                    const data = await res.json();
+                    this.people = data.data || [];
+                    this.meta = data.meta || {};
+                }
+            } catch (e) { console.error(e); }
+            this.loading = false;
+        },
+        
+        goToPage(p) {
+            if (p >= 1 && p <= this.meta.last_page) {
+                this.page = p;
+                this.loadData();
+            }
+        },
+        
+        async deletePerson(person) {
+            if (!confirm(`Delete "${person.first_name} ${person.last_name}"? This cannot be undone.`)) return;
+            try {
+                const res = await api.delete('/people/' + person.id + '/');
+                if (res?.ok) {
+                    this.people = this.people.filter(p => p.id !== person.id);
+                } else {
+                    alert('Failed to delete person');
+                }
+            } catch (e) { console.error(e); alert('Error deleting person'); }
+        }
+    }
+}
+</script>
+{% endblock %}

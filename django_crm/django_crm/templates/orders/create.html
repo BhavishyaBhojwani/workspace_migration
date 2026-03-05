@@ -1,0 +1,354 @@
+{% extends 'layouts/app.html' %}
+
+{% block nav_orders %}bg-gray-700 text-white{% endblock %}
+{% block page_title %}Create Order{% endblock %}
+
+{% block page_content %}
+<div x-data="orderCreate()" x-init="init()">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center">
+            <a href="/orders/" class="text-gray-500 hover:text-gray-700 mr-3">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <h1 class="text-2xl font-bold text-gray-800">Create Order</h1>
+        </div>
+    </div>
+    
+    <form @submit.prevent="submit()">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Order Details</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Reference</label>
+                    <input type="text" x-model="form.reference"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        placeholder="Enter reference">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Currency</label>
+                    <select x-model="form.currency"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="GBP">GBP</option>
+                        <option value="INR">INR</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Person</label>
+                    <select x-model="form.person_id"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">Select Person</option>
+                        <template x-for="person in people" :key="person.id">
+                            <option :value="person.id" x-text="person.name"></option>
+                        </template>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Organisation</label>
+                    <select x-model="form.organisation_id"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">Select Organisation</option>
+                        <template x-for="org in organisations" :key="org.id">
+                            <option :value="org.id" x-text="org.name"></option>
+                        </template>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Deal</label>
+                    <select x-model="form.deal_id"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">Select Deal</option>
+                        <template x-for="deal in deals" :key="deal.id">
+                            <option :value="deal.id" x-text="deal.name"></option>
+                        </template>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Quote</label>
+                    <select x-model="form.quote_id"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">Select Quote</option>
+                        <template x-for="quote in quotes" :key="quote.id">
+                            <option :value="quote.id" x-text="quote.title"></option>
+                        </template>
+                    </select>
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <textarea x-model="form.description" rows="3"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        placeholder="Enter description"></textarea>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Products -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-gray-800">Products</h2>
+                <button type="button" @click="addProduct()"
+                    class="px-3 py-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm">
+                    <i class="fas fa-plus mr-1"></i> Add Product
+                </button>
+            </div>
+            
+            <template x-if="form.products.length === 0">
+                <p class="text-gray-500 text-center py-4">No products added</p>
+            </template>
+            
+            <template x-for="(product, index) in form.products" :key="index">
+                <div class="border border-gray-200 rounded-lg p-4 mb-4">
+                    <div class="flex justify-end mb-2">
+                        <button type="button" @click="removeProduct(index)" class="text-red-500 hover:text-red-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Product</label>
+                            <select x-model="product.product_id" @change="updateProductPrice(index)"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                                <option value="">Select Product</option>
+                                <template x-for="p in productsList" :key="p.id">
+                                    <option :value="p.id" x-text="p.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                            <input type="number" x-model="product.price" step="0.01"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                @input="calculateTotal()">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                            <input type="number" x-model="product.quantity" min="1"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                @input="calculateTotal()">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                            <input type="text" :value="formatCurrency(product.price * product.quantity)" readonly
+                                class="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                        </div>
+                    </div>
+                </div>
+            </template>
+            
+            <!-- Totals -->
+            <div class="border-t border-gray-200 pt-4 mt-4">
+                <div class="flex justify-end">
+                    <div class="w-64 space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Subtotal:</span>
+                            <span class="font-medium" x-text="formatCurrency(totals.subtotal)"></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Tax:</span>
+                            <span class="font-medium" x-text="formatCurrency(totals.tax)"></span>
+                        </div>
+                        <div class="flex justify-between text-lg font-bold">
+                            <span>Total:</span>
+                            <span x-text="formatCurrency(totals.total)"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Terms -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Terms & Conditions</h2>
+            <textarea x-model="form.terms" rows="4"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Enter terms and conditions"></textarea>
+        </div>
+        
+        <div class="flex items-center justify-end gap-3">
+            <a href="/orders/" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                Cancel
+            </a>
+            <button type="submit" :disabled="submitting"
+                class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+                <i class="fas fa-spinner fa-spin mr-2" x-show="submitting"></i>
+                Create Order
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function orderCreate() {
+    return {
+        form: {
+            reference: '',
+            description: '',
+            person_id: '',
+            organisation_id: '',
+            deal_id: '',
+            quote_id: '',
+            currency: 'USD',
+            terms: '',
+            products: []
+        },
+        totals: {
+            subtotal: 0,
+            tax: 0,
+            total: 0
+        },
+        people: [],
+        organisations: [],
+        deals: [],
+        quotes: [],
+        productsList: [],
+        submitting: false,
+        
+        async init() {
+            await Promise.all([
+                this.loadPeople(),
+                this.loadOrganisations(),
+                this.loadDeals(),
+                this.loadQuotes(),
+                this.loadProducts()
+            ]);
+        },
+        
+        async loadPeople() {
+            try {
+                const response = await fetch('/api/v1/crm/people/?per_page=100', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                const data = await response.json();
+                if (data.success) this.people = data.data;
+            } catch (error) {
+                console.error('Error loading people:', error);
+            }
+        },
+        
+        async loadOrganisations() {
+            try {
+                const response = await fetch('/api/v1/crm/organisations/?per_page=100', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                const data = await response.json();
+                if (data.success) this.organisations = data.data;
+            } catch (error) {
+                console.error('Error loading organisations:', error);
+            }
+        },
+        
+        async loadDeals() {
+            try {
+                const response = await fetch('/api/v1/crm/deals/?per_page=100', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                const data = await response.json();
+                if (data.success) this.deals = data.data;
+            } catch (error) {
+                console.error('Error loading deals:', error);
+            }
+        },
+        
+        async loadQuotes() {
+            try {
+                const response = await fetch('/api/v1/sales/quotes/?per_page=100', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                const data = await response.json();
+                if (data.success) this.quotes = data.data;
+            } catch (error) {
+                console.error('Error loading quotes:', error);
+            }
+        },
+        
+        async loadProducts() {
+            try {
+                const response = await fetch('/api/v1/products/?per_page=100', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                const data = await response.json();
+                if (data.success) this.productsList = data.data;
+            } catch (error) {
+                console.error('Error loading products:', error);
+            }
+        },
+        
+        addProduct() {
+            this.form.products.push({
+                product_id: '',
+                price: 0,
+                quantity: 1,
+                tax_rate: 0
+            });
+        },
+        
+        removeProduct(index) {
+            this.form.products.splice(index, 1);
+            this.calculateTotal();
+        },
+        
+        updateProductPrice(index) {
+            const product = this.form.products[index];
+            const found = this.productsList.find(p => p.id == product.product_id);
+            if (found && found.price) {
+                product.price = found.price / 100;
+            }
+            this.calculateTotal();
+        },
+        
+        calculateTotal() {
+            this.totals.subtotal = this.form.products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+            this.totals.tax = 0;
+            this.totals.total = this.totals.subtotal + this.totals.tax;
+        },
+        
+        formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: this.form.currency
+            }).format(amount || 0);
+        },
+        
+        async submit() {
+            this.submitting = true;
+            try {
+                const payload = {
+                    ...this.form,
+                    subtotal: Math.round(this.totals.subtotal * 100),
+                    tax: Math.round(this.totals.tax * 100),
+                    total: Math.round(this.totals.total * 100)
+                };
+                
+                const response = await fetch('/api/v1/sales/orders/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/orders/' + data.data.id;
+                } else {
+                    alert(data.message || 'Error creating order');
+                }
+            } catch (error) {
+                console.error('Error creating order:', error);
+                alert('Error creating order');
+            }
+            this.submitting = false;
+        }
+    }
+}
+</script>
+{% endblock %}
