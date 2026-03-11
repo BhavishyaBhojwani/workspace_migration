@@ -55,10 +55,17 @@ class LeadListSerializer(serializers.ModelSerializer):
     def get_labels(self, obj):
         """Return labels as a comma-separated string for display."""
         try:
-            labels = obj.labels.all()
-            return ', '.join([label.name for label in labels]) if labels else ''
+            from apps.crm.models import Labelable
+            # Get labels through Labelable model
+            labelables = Labelable.objects.filter(
+                labelable_id=obj.id,
+                labelable_type__model='lead'
+            ).select_related('label')
+            
+            labels = [labelable.label.name for labelable in labelables]
+            return ', '.join(labels) if labels else ''
         except Exception:
-            # Handle GenericRelation access issues
+            # Handle any access issues
             return ''
 
 
@@ -176,7 +183,12 @@ class LeadCreateSerializer(serializers.ModelSerializer):
         
         # Process labels if provided
         if labels_str and labels_str.strip():
-            from apps.crm.models import Label
+            from apps.crm.models import Label, Labelable, ContentType
+            from django.contrib.contenttypes.models import ContentType
+            
+            # Get ContentType for Lead model
+            lead_content_type = ContentType.objects.get_for_model(Lead)
+            
             label_names = [name.strip() for name in labels_str.split(',') if name.strip()]
             
             for label_name in label_names:
@@ -184,14 +196,16 @@ class LeadCreateSerializer(serializers.ModelSerializer):
                 label, created = Label.objects.get_or_create(
                     name=label_name,
                     defaults={
-                        'team_id': user.profile.team_id if hasattr(user, 'profile') else None,
-                        'user_created': user,
-                        'user_updated': user
+                        'team_id': user.profile.team_id if hasattr(user, 'profile') else None
                     }
                 )
                 
-                # Add label to lead
-                lead.labels.add(label)
+                # Create Labelable relationship
+                Labelable.objects.get_or_create(
+                    label=label,
+                    labelable_type=lead_content_type,
+                    labelable_id=lead.id
+                )
         
         return lead
 
