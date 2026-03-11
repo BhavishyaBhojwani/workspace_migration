@@ -197,35 +197,55 @@ function leadEdit() {
         
         async loadLead() {
             try {
-                const res = await fetch(`/api/v1/crm/leads/${this.leadId}/`, {
+                const res = await fetch(`/api/v1/leads/${this.leadId}/`, {
                     headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
                 });
                 if (res.ok) {
-                    const lead = await res.json();
+                    const response = await res.json();
+                    const lead = response.data; // Extract data from wrapped response
+                    
+                    // Load all dropdown data FIRST
+                    await Promise.all([
+                        this.loadPeople(),
+                        this.loadOrganisations(),
+                        this.loadPipelineStages()
+                    ]);
+                    
+                    // Then set form values
                     this.form = {
                         title: lead.title || '',
                         description: lead.description || '',
-                        lead_status_id: lead.lead_status_id || '',
-                        lead_source_id: lead.lead_source_id || '',
-                        person_id: lead.person_id || '',
-                        organisation_id: lead.organisation_id || '',
+                        lead_status_id: lead.lead_status || null,
+                        lead_source_id: lead.lead_source || null,
+                        person_id: lead.person || null,
+                        organisation_id: lead.organisation || null,
                         pipeline_id: lead.pipeline_id || '',
-                        pipeline_stage_id: lead.pipeline_stage_id || '',
-                        amount: lead.amount_display || '',
+                        pipeline_stage_id: lead.lead_status || null,
+                        amount: lead.amount || '',
                         currency: lead.currency || 'USD'
                     };
                     
-                    // Load stages for selected pipeline
-                    if (this.form.pipeline_id) {
-                        await this.loadPipelineStages();
-                    }
+                    console.log('Loaded form data:', this.form);
+                    console.log('Lead data received:', lead);
+                    console.log('Person ID:', lead.person, 'Type:', typeof lead.person);
+                    console.log('Organisation ID:', lead.organisation, 'Type:', typeof lead.organisation);
+                    console.log('Lead Status ID:', lead.lead_status, 'Type:', typeof lead.lead_status);
+                    console.log('People loaded:', this.people.length);
+                    console.log('Organisations loaded:', this.organisations.length);
+                    console.log('Pipeline stages loaded:', this.pipelineStages.length);
+                    console.log('Form person_id type:', typeof this.form.person_id, 'value:', this.form.person_id);
+                    console.log('Form organisation_id type:', typeof this.form.organisation_id, 'value:', this.form.organisation_id);
+                    console.log('Form lead_status_id type:', typeof this.form.lead_status_id, 'value:', this.form.lead_status_id);
+                    console.log('Available person IDs:', this.people.map(p => ({id: p.id, type: typeof p.id})));
+                    console.log('Available organisation IDs:', this.organisations.map(o => ({id: o.id, type: typeof o.id})));
+                    console.log('Available pipeline stage IDs:', this.pipelineStages.map(s => ({id: s.id, type: typeof s.id})));
                 }
             } catch (e) { console.error('Error loading lead:', e); }
         },
         
         async loadLeadStatuses() {
             try {
-                const res = await fetch('/api/v1/crm/lead-statuses/', {
+                const res = await fetch('/api/v1/lead-statuses/', {
                     headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
                 });
                 if (res.ok) this.leadStatuses = (await res.json()).results || [];
@@ -269,22 +289,13 @@ function leadEdit() {
         },
         
         async loadPipelineStages() {
-            const currentStageId = this.form.pipeline_stage_id;
-            this.pipelineStages = [];
-            if (!this.form.pipeline_id) {
-                this.form.pipeline_stage_id = '';
-                return;
-            }
-            
             try {
-                const res = await fetch(`/api/v1/crm/pipeline-stages/?pipeline_id=${this.form.pipeline_id}`, {
+                const res = await fetch('/api/v1/lead-statuses/', {
                     headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
                 });
                 if (res.ok) {
-                    this.pipelineStages = (await res.json()).results || [];
-                    // Retain selected stage if it belongs to this pipeline
-                    const stageExists = this.pipelineStages.find(s => s.id == currentStageId);
-                    if (!stageExists) this.form.pipeline_stage_id = '';
+                    const response = await res.json();
+                    this.pipelineStages = response.data || [];
                 }
             } catch (e) {}
         },
@@ -297,17 +308,17 @@ function leadEdit() {
                 const payload = {
                     title: this.form.title,
                     description: this.form.description || null,
-                    lead_status_id: this.form.lead_status_id || null,
+                    lead_status_id: this.form.pipeline_stage_id ? parseInt(this.form.pipeline_stage_id) : null,
                     lead_source_id: this.form.lead_source_id || null,
                     person_id: this.form.person_id || null,
                     organisation_id: this.form.organisation_id || null,
-                    pipeline_id: this.form.pipeline_id || null,
-                    pipeline_stage_id: this.form.pipeline_stage_id || null,
                     amount: this.form.amount ? parseFloat(this.form.amount) : null,
                     currency: this.form.currency
                 };
                 
-                const res = await fetch(`/api/v1/crm/leads/${this.leadId}/`, {
+                console.log('Submitting payload:', payload);
+                
+                const res = await fetch(`/api/v1/leads/${this.leadId}/`, {
                     method: 'PATCH',
                     headers: {
                         'Authorization': 'Bearer ' + localStorage.getItem('access_token'),

@@ -573,7 +573,7 @@ class DealSelector:
         """Get base queryset filtered by team."""
         qs = Deal.objects.all()
         
-        if user.current_crm_team:
+        if hasattr(user, 'current_crm_team') and user.current_crm_team:
             qs = qs.filter(team_id=user.current_crm_team.id)
         
         if not include_deleted:
@@ -587,20 +587,14 @@ class DealSelector:
     @staticmethod
     def with_relations(queryset):
         """Eager load related data."""
+        # Simplified to avoid prefetching non-existent relationships
         return queryset.select_related(
             'person',
-            'organisation',
-            'lead',
+            'organisation', 
             'pipeline',
             'pipeline_stage',
-            'pipeline_stage__pipeline_stage_probability',
             'user_owner',
             'user_assigned',
-        ).prefetch_related(
-            'person__emails',
-            'person__phones',
-            'deal_products__product',
-            'labelables__label',
         )
     
     @staticmethod

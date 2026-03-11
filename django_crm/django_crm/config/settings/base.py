@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "apps.core",
     "apps.crm",
     "apps.pipeline",
+    "apps.leads",
     "apps.sales",
     "apps.products",
     "apps.purchasing",

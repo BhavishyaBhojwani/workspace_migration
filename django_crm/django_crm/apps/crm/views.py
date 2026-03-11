@@ -16,12 +16,11 @@ from .models import Organisation, Person, Label, OrganisationType, Industry
 from .selectors import (
     OrganisationSelector, PersonSelector, LabelSelector,
     OrganisationTypeSelector, IndustrySelector,
-    PipelineSelector, PipelineStageSelector, LeadStatusSelector,
-    LeadSourceSelector, LeadSelector, DealSelector
+    PipelineSelector, PipelineStageSelector, DealSelector
 )
 from .services import (
     OrganisationService, PersonService,
-    PipelineService, PipelineStageService, LeadService, DealService
+    PipelineService, PipelineStageService, DealService
 )
 from .serializers import (
     OrganisationListSerializer, OrganisationDetailSerializer,
@@ -31,9 +30,7 @@ from .serializers import (
     LabelSerializer, OrganisationTypeSerializer, IndustrySerializer,
     PipelineSerializer, PipelineListSerializer, PipelineCreateSerializer,
     PipelineUpdateSerializer, PipelineStageSerializer, PipelineStageCreateSerializer,
-    PipelineStageUpdateSerializer, LeadStatusSerializer, LeadSourceSerializer,
-    LeadSerializer, LeadListSerializer, LeadCreateSerializer, LeadUpdateSerializer,
-    LeadConvertSerializer, DealSerializer, DealListSerializer, DealCreateSerializer,
+    PipelineStageUpdateSerializer, DealSerializer, DealListSerializer, DealCreateSerializer,
     DealUpdateSerializer, DealCloseSerializer
 )
 from apps.pipeline.models import Lead, Deal, Pipeline, PipelineStage
@@ -868,45 +865,47 @@ class LeadSourceViewSet(ViewSet):
         })
 
 
-class LeadViewSet(ViewSet):
+class DealViewSet(ViewSet):
     """
-    ViewSet for leads.
-    Replicates Laravel's LeadController.
+    ViewSet for deals.
+    Replicates Laravel's DealController.
     
     Endpoints:
-        GET    /leads               - List leads
-        POST   /leads               - Create lead
-        GET    /leads/{id}          - Get lead
-        PUT    /leads/{id}          - Update lead
-        DELETE /leads/{id}          - Delete lead
-        POST   /leads/{id}/convert  - Convert lead to deal
-        GET    /leads/search        - Search leads
+        GET    /deals               - List deals
+        POST   /deals               - Create deal
+        GET    /deals/{id}          - Get deal
+        PUT    /deals/{id}          - Update deal
+        DELETE /deals/{id}          - Delete deal
+        POST   /deals/{id}/close    - Close deal as won/lost
+        POST   /deals/{id}/reopen   - Reopen closed deal
+        POST   /deals/{id}/move     - Move deal to different stage
+        GET    /deals/search        - Search deals
     """
     permission_classes = [IsAuthenticated, IsCRMUser]
     
     def list(self, request):
-        """GET /leads - List leads with pagination, filtering, sorting."""
+        """GET /deals - List deals with pagination, filtering, sorting."""
         user = request.user
         
         # Get base queryset
-        include_converted = request.query_params.get('include_converted', 'false').lower() == 'true'
-        queryset = LeadSelector.get_queryset(user, include_converted=include_converted)
+        include_closed = request.query_params.get('include_closed', 'true').lower() == 'true'
+        queryset = DealSelector.get_queryset(user, include_closed=include_closed)
         
         # Apply filters
-        queryset = LeadSelector.filter_queryset(queryset, request.query_params)
+        queryset = DealSelector.filter_queryset(queryset, request.query_params)
         
         # Apply search
         search = request.query_params.get('search', '')
         if search:
-            queryset = LeadSelector.search_queryset(queryset, search)
+            queryset = DealSelector.search_queryset(queryset, search)
         
         # Apply sorting
         sort = request.query_params.get('sort', 'created_at')
         direction = request.query_params.get('direction', 'desc')
-        queryset = LeadSelector.sort_queryset(queryset, sort, direction)
+        queryset = DealSelector.sort_queryset(queryset, sort, direction)
         
         # Eager load relations
-        queryset = LeadSelector.with_relations(queryset)
+        queryset = DealSelector.with_relations(queryset)
         
         # Pagination
         page = int(request.query_params.get('page', 1))
@@ -915,7 +914,7 @@ class LeadViewSet(ViewSet):
         total_count = queryset.count()
         
         if total_count <= per_page:
-            serializer = LeadListSerializer(queryset, many=True)
+            serializer = DealListSerializer(queryset, many=True)
             return Response({
                 'success': True,
                 'data': serializer.data,
@@ -930,7 +929,7 @@ class LeadViewSet(ViewSet):
         paginator = Paginator(queryset, per_page)
         page_obj = paginator.get_page(page)
         
-        serializer = LeadListSerializer(page_obj.object_list, many=True)
+        serializer = DealListSerializer(page_obj.object_list, many=True)
         
         return Response({
             'success': True,
@@ -944,18 +943,18 @@ class LeadViewSet(ViewSet):
         })
     
     def retrieve(self, request, pk=None):
-        """GET /leads/{id} - Get lead details."""
+        """GET /deals/{id} - Get deal details."""
         try:
-            queryset = LeadSelector.get_queryset(request.user, include_converted=True)
-            queryset = LeadSelector.with_relations(queryset)
-            lead = queryset.get(pk=pk)
-        except Lead.DoesNotExist:
+            queryset = DealSelector.get_queryset(request.user, include_closed=True)
+            queryset = DealSelector.with_relations(queryset)
+            deal = queryset.get(pk=pk)
+        except Deal.DoesNotExist:
             return Response({
                 'success': False,
-                'message': 'Lead not found'
+                'message': 'Deal not found'
             }, status=status.HTTP_404_NOT_FOUND)
         
-        serializer = LeadSerializer(lead)
+        serializer = DealSerializer(deal)
         return Response({
             'success': True,
             'data': serializer.data
@@ -1238,7 +1237,7 @@ class DealViewSet(ViewSet):
             return Response({
                 'success': False,
                 'errors': serializer.errors
-            }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+            }, status=status.HTTP_400_BAD_REQUEST)
         
         data = serializer.validated_data
         
@@ -1257,6 +1256,11 @@ class DealViewSet(ViewSet):
             'data': DealSerializer(deal).data,
             'message': 'Deal updated successfully'
         })
+    
+    def partial_update(self, request, pk=None):
+        """PATCH /deals/{id} - Partial update deal."""
+        # PATCH and PUT use the same logic for this implementation
+        return self.update(request, pk)
     
     def destroy(self, request, pk=None):
         """DELETE /deals/{id} - Delete deal."""

@@ -17,7 +17,7 @@
                 <div class="flex items-center">
                     <a href="/quotes/" class="text-gray-500 hover:text-gray-700 mr-3">
                         <i class="fas fa-arrow-left"></i>
-                    </a>
+                    </a>s
                     <div>
                         <h1 class="text-2xl font-bold text-gray-800" x-text="quote.title"></h1>
                         <p class="text-gray-500" x-text="quote.quote_id"></p>
@@ -30,46 +30,58 @@
                     </a>
                     <button @click="deleteQuote()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
                         <i class="fas fa-trash mr-2"></i> Delete
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Action Buttons -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6" x-show="!quote.accepted_at && !quote.rejected_at">
-                <div class="flex flex-wrap gap-2">
-                    <button @click="acceptQuote()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                        <i class="fas fa-check mr-2"></i> Accept Quote
-                    </button>
-                    <button @click="rejectQuote()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                        <i class="fas fa-times mr-2"></i> Reject Quote
-                    </button>
-                    <button @click="convertToOrder()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-                        <i class="fas fa-shopping-cart mr-2"></i> Convert to Order
-                    </button>
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Main Details -->
-                <div class="lg:col-span-2 space-y-6">
-                    <!-- Quote Info -->
+                    <!-- Products -->
                     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Quote Information</h2>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <p class="text-sm text-gray-500">Reference</p>
-                                <p class="font-medium" x-text="quote.reference || '-'"></p>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-500">Currency</p>
-                                <p class="font-medium" x-text="quote.currency"></p>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-500">Issue Date</p>
-                                <p class="font-medium" x-text="formatDate(quote.issue_at)"></p>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-500">Expiry Date</p>
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Quote Items</h2>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full">
+                                <thead>
+                                    <tr class="border-b border-gray-200">
+                                        <th class="text-left py-2 text-sm font-medium text-gray-500">Name</th>
+                                        <th class="text-right py-2 text-sm font-medium text-gray-500">Price</th>
+                                        <th class="text-right py-2 text-sm font-medium text-gray-500">Quantity</th>
+                                        <th class="text-right py-2 text-sm font-medium text-gray-500">Tax (%)</th>
+                                        <th class="text-right py-2 text-sm font-medium text-gray-500">Amount</th>
+                                        <th class="text-left py-2 text-sm font-medium text-gray-500">Comments</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="product in quote.products" :key="product.id">
+                                        <tr class="border-b border-gray-100">
+                                            <td class="py-3" x-text="product.product_name || 'Product'"></td>
+                                            <td class="py-3 text-right" x-text="formatCurrency(product.price)"></td>
+                                            <td class="py-3 text-right" x-text="product.quantity"></td>
+                                            <td class="py-3 text-right" x-text="product.tax_rate || 0"></td>
+                                            <td class="py-3 text-right font-medium" x-text="formatCurrency(product.amount)"></td>
+                                            <td class="py-3" x-text="product.comments || '-' "></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="border-t border-gray-200">
+                                        <td colspan="5" class="py-2 text-right text-gray-500">Subtotal:</td>
+                                        <td class="py-2 text-right font-medium" x-text="formatCurrency(quote.subtotal)"></td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="5" class="py-2 text-right text-gray-500">Discount:</td>
+                                        <td class="py-2 text-right font-medium" x-text="formatCurrency(quote.discount)"></td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="5" class="py-2 text-right text-gray-500">Tax:</td>
+                                        <td class="py-2 text-right font-medium" x-text="formatCurrency(quote.tax)"></td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="5" class="py-2 text-right text-gray-500">Adjustment:</td>
+                                        <td class="py-2 text-right font-medium" x-text="formatCurrency(quote.adjustment)"></td>
+                                    </tr>
+                                    <tr class="text-lg">
+                                        <td colspan="5" class="py-2 text-right font-bold">Total:</td>
+                                        <td class="py-2 text-right font-bold" x-text="formatCurrency(quote.total)"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
                                 <p class="font-medium" x-text="formatDate(quote.expire_at)"></p>
                             </div>
                         </div>

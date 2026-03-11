@@ -8,188 +8,290 @@
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
         <div class="flex items-center">
-            <a href="/quotes/" class="text-gray-500 hover:text-gray-700 mr-3">
+            <a href="/quotes/" class="text-gray-500 hover:text-gray-700 mr-4">
                 <i class="fas fa-arrow-left"></i>
             </a>
             <h1 class="text-2xl font-bold text-gray-800">Create Quote</h1>
         </div>
+        <a href="/quotes/" class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition">
+            <i class="fas fa-arrow-left mr-2"></i> Back to quotes
+        </a>
     </div>
     
+    <!-- Error Display -->
+    <div x-show="errorMsg" class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <p x-text="errorMsg"></p>
+    </div>
+    
+    <!-- Form -->
     <form @submit.prevent="submit()">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-            <h2 class="text-lg font-semibold text-gray-800 mb-4">Quote Details</h2>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Title <span class="text-red-500">*</span></label>
-                    <input type="text" x-model="form.title" required
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        placeholder="Enter quote title">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Reference</label>
-                    <input type="text" x-model="form.reference"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        placeholder="Enter reference">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Person</label>
-                    <select x-model="form.person_id"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="">Select Person</option>
-                        <template x-for="person in people" :key="person.id">
-                            <option :value="person.id" x-text="person.name"></option>
-                        </template>
-                    </select>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Organisation</label>
-                    <select x-model="form.organisation_id"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="">Select Organisation</option>
-                        <template x-for="org in organisations" :key="org.id">
-                            <option :value="org.id" x-text="org.name"></option>
-                        </template>
-                    </select>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Deal</label>
-                    <select x-model="form.deal_id"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="">Select Deal</option>
-                        <template x-for="deal in deals" :key="deal.id">
-                            <option :value="deal.id" x-text="deal.name"></option>
-                        </template>
-                    </select>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Currency</label>
-                    <select x-model="form.currency"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                        <option value="GBP">GBP</option>
-                        <option value="INR">INR</option>
-                    </select>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Issue Date</label>
-                    <input type="date" x-model="form.issue_at"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Expiry Date</label>
-                    <input type="date" x-model="form.expire_at"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                </div>
-                
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                    <textarea x-model="form.description" rows="3"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        placeholder="Enter description"></textarea>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Quote Products -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold text-gray-800">Products</h2>
-                <button type="button" @click="addProduct()"
-                    class="px-3 py-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm">
-                    <i class="fas fa-plus mr-1"></i> Add Product
-                </button>
-            </div>
-            
-            <template x-if="form.products.length === 0">
-                <p class="text-gray-500 text-center py-4">No products added</p>
-            </template>
-            
-            <template x-for="(product, index) in form.products" :key="index">
-                <div class="border border-gray-200 rounded-lg p-4 mb-4">
-                    <div class="flex justify-end mb-2">
-                        <button type="button" @click="removeProduct(index)" class="text-red-500 hover:text-red-700">
-                            <i class="fas fa-times"></i>
-                        </button>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Main Content - 2 columns -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Quote Details Card -->
+                <div x-data="{ open: true }" class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div @click="open = !open" class="flex items-center justify-between p-6 cursor-pointer hover:bg-gray-50 transition-colors">
+                        <h3 class="text-lg font-semibold text-gray-800">
+                            <i class="fas fa-file-alt text-indigo-500 mr-2"></i>Quote Details
+                        </h3>
+                        <i class="fas transition-transform duration-200" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 transform translate-y-0" x-transition:leave-end="opacity-0 transform -translate-y-2" class="px-6 pb-6 border-t border-gray-200">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Product</label>
-                            <select x-model="product.product_id" @change="updateProductPrice(index)"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                                <option value="">Select Product</option>
-                                <template x-for="p in productsList" :key="p.id">
-                                    <option :value="p.id" x-text="p.name"></option>
-                                </template>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Customer</label>
+                            <input type="text" x-model="form.customer_name" placeholder="Customer name"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Organization *</label>
+                            <div class="flex gap-2">
+                                <select x-model="form.organisation_id"
+                                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="">-- Select Organization --</option>
+                                    <template x-for="org in organisations" :key="org.id">
+                                        <option :value="org.id" x-text="org.name"></option>
+                                    </template>
+                                </select>
+                                <button type="button" class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                    <i class="fas fa-search text-gray-400"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person *</label>
+                            <div class="flex gap-2">
+                                <select x-model="form.person_id"
+                                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="">-- Select Person --</option>
+                                    <template x-for="person in people" :key="person.id">
+                                        <option :value="person.id" x-text="person.first_name + ' ' + person.last_name"></option>
+                                    </template>
+                                </select>
+                                <button type="button" class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                    <i class="fas fa-search text-gray-400"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                            <input type="text" x-model="form.title" required placeholder="Enter quote title"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                            <textarea x-model="form.description" rows="3" placeholder="Add description..."
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Reference</label>
+                            <input type="text" x-model="form.reference" placeholder="Reference number"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+                            <select x-model="form.currency"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="USD">US Dollar (USD)</option>
+                                <option value="EUR">Euro (EUR)</option>
+                                <option value="GBP">British Pound (GBP)</option>
+                                <option value="INR">Indian Rupee (INR)</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Price</label>
-                            <input type="number" x-model="product.price" step="0.01"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                                @input="calculateTotal()">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Issue Date</label>
+                            <input type="date" x-model="form.issue_date"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-                            <input type="number" x-model="product.quantity" min="1"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                                @input="calculateTotal()">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+                            <input type="date" x-model="form.expiry_date"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Terms</label>
+                            <textarea x-model="form.terms" rows="3" placeholder="Payment terms and conditions..."
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
-                            <input type="text" :value="formatCurrency(product.price * product.quantity)" readonly
-                                class="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Stage</label>
+                            <select x-model="form.stage"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="Draft">Draft</option>
+                                <option value="Sent">Sent</option>
+                                <option value="Accepted">Accepted</option>
+                                <option value="Rejected">Rejected</option>
+                                <option value="Expired">Expired</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Labels</label>
+                            <input type="text" x-model="form.labels" placeholder="Add labels (comma separated)"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Owner</label>
+                            <select x-model="form.owner_id"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <template x-for="user in users" :key="user.id">
+                                    <option :value="user.id" x-text="user.name"></option>
+                                </template>
+                            </select>
                         </div>
                     </div>
+                    </div>
                 </div>
-            </template>
-            
-            <!-- Totals -->
-            <div class="border-t border-gray-200 pt-4 mt-4">
-                <div class="flex justify-end">
-                    <div class="w-64 space-y-2">
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Subtotal:</span>
-                            <span class="font-medium" x-text="formatCurrency(totals.subtotal)"></span>
+                
+                <!-- Quote Items Card -->
+                <div x-data="{ open: true }" class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div @click="open = !open" class="flex items-center justify-between p-6 cursor-pointer hover:bg-gray-50 transition-colors">
+                        <h3 class="text-lg font-semibold text-gray-800">
+                            <i class="fas fa-list text-indigo-500 mr-2"></i>Quote Items
+                        </h3>
+                        <div class="flex items-center gap-2">
+                            <button type="button" @click.stop="addQuoteItem()" 
+                                class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm">
+                                <i class="fas fa-plus mr-1"></i> Add Item
+                            </button>
+                            <i class="fas transition-transform duration-200" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
                         </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Tax:</span>
-                            <span class="font-medium" x-text="formatCurrency(totals.tax)"></span>
+                    </div>
+                    <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 transform translate-y-0" x-transition:leave-end="opacity-0 transform -translate-y-2" class="px-6 pb-6 border-t border-gray-200">
+                    
+                    <div class="space-y-4">
+                        <template x-for="(item, index) in form.quote_items" :key="index">
+                            <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="font-medium text-gray-700">Item <span x-text="index + 1"></span></h4>
+                                    <button type="button" @click="removeQuoteItem(index)" 
+                                        class="text-red-500 hover:text-red-700">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                        <input type="text" x-model="item.name" placeholder="Item name"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                                        <div class="relative">
+                                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                                            <input type="number" x-model="item.price" step="0.01" min="0" placeholder="0.00"
+                                                @input="calculateItemTotal(index)"
+                                                class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                                        <input type="number" x-model="item.quantity" min="1" placeholder="1"
+                                            @input="calculateItemTotal(index)"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Tax (%)</label>
+                                        <div class="relative">
+                                            <input type="number" x-model="item.tax" step="0.01" min="0" max="100" placeholder="0.00"
+                                                @input="calculateItemTotal(index)"
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 pr-8">
+                                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">%</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                                        <div class="relative">
+                                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                                            <input type="text" :value="formatCurrency(item.amount)" readonly
+                                                class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700">
+                                        </div>
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Comments</label>
+                                        <textarea x-model="item.comments" rows="2" placeholder="Item comments..."
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        
+                        <!-- Empty State -->
+                        <div x-show="form.quote_items.length === 0" class="text-center py-8 text-gray-500">
+                            <i class="fas fa-plus-circle text-3xl mb-2"></i>
+                            <p>No quote items added yet. Click "Add Item" to get started.</p>
                         </div>
-                        <div class="flex justify-between text-lg font-bold">
-                            <span>Total:</span>
-                            <span x-text="formatCurrency(totals.total)"></span>
-                        </div>
+                    </div>
                     </div>
                 </div>
             </div>
-        </div>
-        
-        <!-- Terms -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-            <h2 class="text-lg font-semibold text-gray-800 mb-4">Terms & Conditions</h2>
-            <textarea x-model="form.terms" rows="4"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="Enter terms and conditions"></textarea>
-        </div>
-        
-        <div class="flex items-center justify-end gap-3">
-            <a href="/quotes/" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-                Cancel
-            </a>
-            <button type="submit" :disabled="submitting"
-                class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
-                <i class="fas fa-spinner fa-spin mr-2" x-show="submitting"></i>
-                Create Quote
-            </button>
+            
+            <!-- Sidebar - 1 column -->
+            <div class="space-y-6">
+                <!-- Summary Card -->
+                <div x-data="{ open: true }" class="bg-white rounded-xl shadow-sm border border-gray-200 sticky top-6">
+                    <div @click="open = !open" class="flex items-center justify-between p-6 cursor-pointer hover:bg-gray-50 transition-colors">
+                        <h3 class="text-lg font-semibold text-gray-800">Quote Summary</h3>
+                        <i class="fas transition-transform duration-200" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                    </div>
+                    <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 transform translate-y-0" x-transition:leave-end="opacity-0 transform -translate-y-2" class="px-6 pb-6 border-t border-gray-200">
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Sub Total:</span>
+                            <span class="font-medium" x-text="formatCurrency(summary.sub_total)"></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Discount:</span>
+                            <span class="font-medium" x-text="formatCurrency(summary.discount)"></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Tax:</span>
+                            <span class="font-medium" x-text="formatCurrency(summary.tax)"></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Adjustment:</span>
+                            <span class="font-medium" x-text="formatCurrency(summary.adjustment)"></span>
+                        </div>
+                        <div class="border-t border-gray-200 pt-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-lg font-semibold text-gray-800">Total:</span>
+                                <span class="text-lg font-bold text-indigo-600" x-text="formatCurrency(summary.total)"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Actions Card -->
+                <div x-data="{ open: true }" class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div @click="open = !open" class="flex items-center justify-between p-6 cursor-pointer hover:bg-gray-50 transition-colors">
+                        <h3 class="text-lg font-semibold text-gray-800">Actions</h3>
+                        <i class="fas transition-transform duration-200" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                    </div>
+                    <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 transform translate-y-0" x-transition:leave-end="opacity-0 transform -translate-y-2" class="px-6 pb-6 border-t border-gray-200">
+                    <div class="space-y-3">
+                        <button type="submit" :disabled="submitting"
+                            class="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 font-medium">
+                            <i x-show="submitting" class="fas fa-spinner fa-spin mr-2"></i>
+                            <span x-text="submitting ? 'Saving...' : 'Save Quote'"></span>
+                        </button>
+                        <a href="/quotes/" class="block w-full px-4 py-3 text-center border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
+                            Cancel
+                        </a>
+                    </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Info -->
+                <div class="bg-indigo-50 rounded-xl border border-indigo-100 p-6">
+                    <h4 class="font-semibold text-indigo-800 mb-2">
+                        <i class="fas fa-lightbulb mr-2"></i>Tips
+                    </h4>
+                    <ul class="text-sm text-indigo-700 space-y-2">
+                        <li><i class="fas fa-check text-indigo-500 mr-2"></i>Add detailed item descriptions</li>
+                        <li><i class="fas fa-check text-indigo-500 mr-2"></i>Set appropriate tax rates</li>
+                        <li><i class="fas fa-check text-indigo-500 mr-2"></i>Review totals before saving</li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </form>
 </div>
@@ -198,138 +300,238 @@
 function quoteCreate() {
     return {
         form: {
-            title: '',
-            reference: '',
-            description: '',
-            person_id: '',
+            customer_name: '',
             organisation_id: '',
-            deal_id: '',
+            person_id: '',
+            title: '',
+            description: '',
+            reference: '',
             currency: 'USD',
-            issue_at: new Date().toISOString().split('T')[0],
-            expire_at: '',
+            issue_date: '',
+            expiry_date: '',
             terms: '',
-            products: []
-        },
-        totals: {
-            subtotal: 0,
-            tax: 0,
-            total: 0
+            stage: 'Draft',
+            labels: '',
+            owner_id: '',
+            quote_items: []
         },
         people: [],
         organisations: [],
-        deals: [],
-        productsList: [],
+        users: [],
         submitting: false,
+        errorMsg: '',
+        summary: {
+            sub_total: 0,
+            discount: 0,
+            tax: 0,
+            adjustment: 0,
+            total: 0
+        },
         
         async init() {
+            const token = localStorage.getItem('access_token');
+            if (!token) { window.location.href = '/login'; return; }
+            
+            const userData = localStorage.getItem('user');
+            if (userData) {
+                const user = JSON.parse(userData);
+                this.form.owner_id = user.id;
+                this.users = [{ id: user.id, name: user.name }];
+            }
+            
+            // Set today's date as issue date
+            const today = new Date().toISOString().split('T')[0];
+            this.form.issue_date = today;
+            
+            // Set expiry date to 30 days from now
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + 30);
+            this.form.expiry_date = expiryDate.toISOString().split('T')[0];
+            
             await Promise.all([
                 this.loadPeople(),
                 this.loadOrganisations(),
-                this.loadDeals(),
-                this.loadProducts()
+                this.loadUsers()
             ]);
             
-            // Set default expiry date to 30 days from now
-            const expiry = new Date();
-            expiry.setDate(expiry.getDate() + 30);
-            this.form.expire_at = expiry.toISOString().split('T')[0];
+            // Add one empty quote item by default
+            this.addQuoteItem();
         },
         
         async loadPeople() {
             try {
-                const response = await fetch('/api/v1/crm/people/?per_page=100', {
+                const res = await fetch('/api/v1/people/', {
                     headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
                 });
-                const data = await response.json();
-                if (data.success) this.people = data.data;
-            } catch (error) {
-                console.error('Error loading people:', error);
-            }
+                if (res.ok) {
+                    const data = await res.json();
+                    this.people = data.data || [];
+                }
+            } catch (e) { console.error('Error loading people:', e); }
         },
         
         async loadOrganisations() {
             try {
-                const response = await fetch('/api/v1/crm/organisations/?per_page=100', {
+                const res = await fetch('/api/v1/organisations/', {
                     headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
                 });
-                const data = await response.json();
-                if (data.success) this.organisations = data.data;
-            } catch (error) {
-                console.error('Error loading organisations:', error);
-            }
+                if (res.ok) {
+                    const data = await res.json();
+                    this.organisations = data.data || [];
+                }
+            } catch (e) { console.error('Error loading organisations:', e); }
         },
         
-        async loadDeals() {
+        async loadUsers() {
             try {
-                const response = await fetch('/api/v1/crm/deals/?per_page=100', {
+                const res = await fetch('/api/v1/auth/users/', {
                     headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
                 });
-                const data = await response.json();
-                if (data.success) this.deals = data.data;
-            } catch (error) {
-                console.error('Error loading deals:', error);
-            }
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.data?.length) this.users = data.data;
+                    else if (data.results?.length) this.users = data.results;
+                }
+            } catch (e) { console.error('Error loading users:', e); }
         },
         
-        async loadProducts() {
-            try {
-                const response = await fetch('/api/v1/products/?per_page=100', {
-                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
-                });
-                const data = await response.json();
-                if (data.success) this.productsList = data.data;
-            } catch (error) {
-                console.error('Error loading products:', error);
-            }
-        },
-        
-        addProduct() {
-            this.form.products.push({
-                product_id: '',
+        addQuoteItem() {
+            this.form.quote_items.push({
+                name: '',
                 price: 0,
                 quantity: 1,
-                tax_rate: 0
+                tax: 0,
+                amount: 0,
+                comments: ''
             });
+            this.calculateSummary();
         },
         
-        removeProduct(index) {
-            this.form.products.splice(index, 1);
-            this.calculateTotal();
-        },
-        
-        updateProductPrice(index) {
-            const product = this.form.products[index];
-            const found = this.productsList.find(p => p.id == product.product_id);
-            if (found && found.price) {
-                product.price = found.price / 100;
+        removeQuoteItem(index) {
+            if (this.form.quote_items.length > 1) {
+                this.form.quote_items.splice(index, 1);
+                this.calculateSummary();
             }
-            this.calculateTotal();
         },
         
-        calculateTotal() {
-            this.totals.subtotal = this.form.products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
-            this.totals.tax = 0;
-            this.totals.total = this.totals.subtotal + this.totals.tax;
+        calculateItemTotal(index) {
+            const item = this.form.quote_items[index];
+            const price = parseFloat(item.price) || 0;
+            const quantity = parseFloat(item.quantity) || 1;
+            const tax = parseFloat(item.tax) || 0;
+            
+            const subtotal = price * quantity;
+            const taxAmount = subtotal * (tax / 100);
+            item.amount = subtotal + taxAmount;
+            
+            this.calculateSummary();
+        },
+        
+        calculateSummary() {
+            let subTotal = 0;
+            let totalTax = 0;
+            
+            this.form.quote_items.forEach(item => {
+                const price = parseFloat(item.price) || 0;
+                const quantity = parseFloat(item.quantity) || 1;
+                const tax = parseFloat(item.tax) || 0;
+                
+                const itemSubtotal = price * quantity;
+                const itemTax = itemSubtotal * (tax / 100);
+                
+                subTotal += itemSubtotal;
+                totalTax += itemTax;
+            });
+            
+            this.summary.sub_total = subTotal;
+            this.summary.discount = 0; // Can be implemented later
+            this.summary.tax = totalTax;
+            this.summary.adjustment = 0; // Can be implemented later
+            this.summary.total = subTotal + totalTax - this.summary.discount + this.summary.adjustment;
         },
         
         formatCurrency(amount) {
+            if (amount === null || amount === undefined) return '$ 0.00';
             return new Intl.NumberFormat('en-US', {
                 style: 'currency',
-                currency: this.form.currency
-            }).format(amount || 0);
+                currency: 'USD'
+            }).format(amount);
         },
         
         async submit() {
+            this.errorMsg = '';
+            
+            // Validation
+            if (!this.form.title) {
+                this.errorMsg = 'Title is required';
+                return;
+            }
+            
+            if (!this.form.organisation_id) {
+                this.errorMsg = 'Organization is required';
+                return;
+            }
+            
+            if (!this.form.person_id) {
+                this.errorMsg = 'Contact person is required';
+                return;
+            }
+            
+            if (this.form.quote_items.length === 0) {
+                this.errorMsg = 'At least one quote item is required';
+                return;
+            }
+            
+            // Validate quote items
+            for (let i = 0; i < this.form.quote_items.length; i++) {
+                const item = this.form.quote_items[i];
+                if (!item.name) {
+                    this.errorMsg = `Item ${i + 1}: Name is required`;
+                    return;
+                }
+                if (!item.price || item.price <= 0) {
+                    this.errorMsg = `Item ${i + 1}: Price must be greater than 0`;
+                    return;
+                }
+                if (!item.quantity || item.quantity <= 0) {
+                    this.errorMsg = `Item ${i + 1}: Quantity must be greater than 0`;
+                    return;
+                }
+            }
+            
             this.submitting = true;
+            
             try {
                 const payload = {
-                    ...this.form,
-                    subtotal: Math.round(this.totals.subtotal * 100),
-                    tax: Math.round(this.totals.tax * 100),
-                    total: Math.round(this.totals.total * 100)
+                    customer_name: this.form.customer_name,
+                    organisation_id: this.form.organisation_id,
+                    person_id: this.form.person_id,
+                    title: this.form.title,
+                    description: this.form.description,
+                    reference: this.form.reference,
+                    currency: this.form.currency,
+                    issue_date: this.form.issue_date,
+                    expiry_date: this.form.expiry_date,
+                    terms: this.form.terms,
+                    stage: this.form.stage,
+                    labels: this.form.labels,
+                    owner_id: this.form.owner_id,
+                    quote_items: this.form.quote_items.map(item => ({
+                        name: item.name,
+                        price: Math.round(parseFloat(item.price) * 100), // Convert to cents
+                        quantity: parseInt(item.quantity),
+                        tax: parseFloat(item.tax),
+                        amount: Math.round(parseFloat(item.amount) * 100), // Convert to cents
+                        comments: item.comments
+                    })),
+                    sub_total: Math.round(this.summary.sub_total * 100),
+                    discount: Math.round(this.summary.discount * 100),
+                    tax: Math.round(this.summary.tax * 100),
+                    adjustment: Math.round(this.summary.adjustment * 100),
+                    total: Math.round(this.summary.total * 100)
                 };
                 
-                const response = await fetch('/api/v1/sales/quotes/', {
+                const res = await fetch('/api/v1/crm/quotes/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -337,17 +539,20 @@ function quoteCreate() {
                     },
                     body: JSON.stringify(payload)
                 });
-                const data = await response.json();
-                if (data.success) {
+                
+                const data = await res.json();
+                
+                if (res.ok && data.success) {
                     window.location.href = '/quotes/' + data.data.id;
                 } else {
-                    alert(data.message || 'Error creating quote');
+                    this.errorMsg = data.message || 'Failed to create quote';
                 }
-            } catch (error) {
-                console.error('Error creating quote:', error);
-                alert('Error creating quote');
+            } catch (e) {
+                console.error('Error:', e);
+                this.errorMsg = 'An error occurred while creating the quote';
+            } finally {
+                this.submitting = false;
             }
-            this.submitting = false;
         }
     }
 }

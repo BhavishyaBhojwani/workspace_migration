@@ -613,7 +613,10 @@ class DealSerializer(serializers.ModelSerializer):
     pipeline_stage = PipelineStageSerializer(read_only=True)
     person = PersonListSerializer(read_only=True)
     organisation = OrganisationListSerializer(read_only=True)
+    user_owner = UserMiniSerializer(read_only=True)
+    user_assigned = UserMiniSerializer(read_only=True)
     deal_products = DealProductSerializer(many=True, read_only=True)
+    labels = serializers.SerializerMethodField()
     amount_display = serializers.SerializerMethodField()
     primary_email = serializers.SerializerMethodField()
     primary_phone = serializers.SerializerMethodField()
@@ -626,8 +629,8 @@ class DealSerializer(serializers.ModelSerializer):
             'expected_close', 'closed_at', 'closed_status',
             'pipeline_id', 'pipeline_stage_id', 'pipeline_stage',
             'person_id', 'person', 'organisation_id', 'organisation',
-            'lead_id', 'deal_products',
-            'user_owner_id', 'user_assigned_id',
+            'lead_id', 'deal_products', 'labels',
+            'user_owner_id', 'user_owner', 'user_assigned_id', 'user_assigned',
             'primary_email', 'primary_phone',
             'created_at', 'updated_at'
         ]
@@ -655,6 +658,12 @@ class DealSerializer(serializers.ModelSerializer):
             if phone:
                 return phone.number
         return None
+    
+    def get_labels(self, obj):
+        """Get labels for the deal."""
+        if hasattr(obj, 'labels'):
+            return LabelSerializer(obj.labels.all(), many=True).data
+        return []
 
 
 class DealListSerializer(serializers.ModelSerializer):
@@ -663,6 +672,8 @@ class DealListSerializer(serializers.ModelSerializer):
     person_name = serializers.SerializerMethodField()
     organisation_name = serializers.SerializerMethodField()
     amount_display = serializers.SerializerMethodField()
+    user_owner_name = serializers.SerializerMethodField()
+    labels = serializers.SerializerMethodField()
     
     class Meta:
         model = Deal
@@ -672,6 +683,8 @@ class DealListSerializer(serializers.ModelSerializer):
             'pipeline_stage_name', 'closed_status',
             'person_id', 'person_name',
             'organisation_id', 'organisation_name',
+            'user_owner_id', 'user_owner_name',
+            'labels',
             'expected_close', 'closed_at', 'created_at'
         ]
         read_only_fields = ['id', 'external_id', 'deal_id', 'created_at']
@@ -691,6 +704,17 @@ class DealListSerializer(serializers.ModelSerializer):
         if obj.amount:
             return obj.amount / 100
         return None
+    
+    def get_user_owner_name(self, obj):
+        if obj.user_owner:
+            return obj.user_owner.name
+        return None
+    
+    def get_labels(self, obj):
+        """Get labels for the deal."""
+        if hasattr(obj, 'labels'):
+            return LabelSerializer(obj.labels.all(), many=True).data
+        return []
 
 
 class DealProductInputSerializer(serializers.Serializer):

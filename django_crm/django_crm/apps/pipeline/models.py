@@ -255,7 +255,7 @@ class Deal(models.Model):
     )
     pipeline_stage_order = models.IntegerField(null=True, blank=True)
     lead = models.ForeignKey(
-        Lead,
+        'leads.Lead',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

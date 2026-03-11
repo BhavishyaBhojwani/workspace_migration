@@ -20,7 +20,7 @@
                 </a>
                 <div>
                     <h1 class="text-2xl font-bold text-gray-800" x-text="lead.title"></h1>
-                    <p class="text-gray-500" x-text="lead.lead_id"></p>
+                    <p class="text-gray-500" x-text="'Lead #' + (lead.id || '—')"></p>
                 </div>
             </div>
             <div class="flex items-center gap-2 mt-4 sm:mt-0">
@@ -40,7 +40,7 @@
         
         <!-- Status Badge -->
         <div class="mb-6">
-            <span class="px-3 py-1 rounded-full text-sm font-medium" :class="getStatusClass(lead.lead_status_name)" x-text="lead.lead_status_name || 'No Status'"></span>
+            <span class="px-3 py-1 rounded-full text-sm font-medium" :class="getStatusClass(lead.lead_status?.name)" x-text="lead.lead_status?.name || 'No Status'"></span>
             <template x-if="lead.converted_at">
                 <span class="ml-2 px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                     <i class="fas fa-check mr-1"></i> Converted
@@ -62,23 +62,19 @@
                         </div>
                         <div>
                             <label class="text-sm text-gray-500">Lead ID</label>
-                            <p class="font-medium text-gray-800" x-text="lead.lead_id || '—'"></p>
+                            <p class="font-medium text-gray-800" x-text="lead.id || '—'"></p>
                         </div>
                         <div>
                             <label class="text-sm text-gray-500">Status</label>
-                            <p class="font-medium text-gray-800" x-text="lead.lead_status_name || '—'"></p>
+                            <p class="font-medium text-gray-800" x-text="lead.lead_status?.name || '—'"></p>
                         </div>
                         <div>
                             <label class="text-sm text-gray-500">Source</label>
-                            <p class="font-medium text-gray-800" x-text="lead.lead_source_name || '—'"></p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500">Pipeline</label>
-                            <p class="font-medium text-gray-800" x-text="lead.pipeline_name || '—'"></p>
+                            <p class="font-medium text-gray-800" x-text="lead.lead_source?.name || '—'"></p>
                         </div>
                         <div>
                             <label class="text-sm text-gray-500">Stage</label>
-                            <p class="font-medium text-gray-800" x-text="lead.pipeline_stage_name || '—'"></p>
+                            <p class="font-medium text-gray-800" x-text="lead.lead_status?.name || '—'"></p>
                         </div>
                     </div>
                 </div>
@@ -91,7 +87,7 @@
                             <i class="fas fa-dollar-sign text-indigo-600 text-xl"></i>
                         </div>
                         <div>
-                            <p class="text-2xl font-bold text-gray-800" x-text="formatCurrency(lead.amount_display, lead.currency)"></p>
+                            <p class="text-2xl font-bold text-gray-800" x-text="formatCurrency(lead.amount, lead.currency)"></p>
                             <p class="text-sm text-gray-500">Estimated Value</p>
                         </div>
                     </div>
@@ -128,6 +124,10 @@
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Details</h3>
                     <div class="space-y-3 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Lead ID</span>
+                            <span class="text-gray-800" x-text="lead.id || '—'"></span>
+                        </div>
                         <div class="flex justify-between">
                             <span class="text-gray-500">Created</span>
                             <span class="text-gray-800" x-text="formatDateTime(lead.created_at)"></span>
@@ -204,13 +204,14 @@ function leadShow() {
         async loadLead(id) {
             this.loading = true;
             try {
-                const res = await fetch(`/api/v1/crm/leads/${id}/`, {
+                const res = await fetch(`/api/v1/leads/${id}/`, {
                     headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
                 });
                 if (res.ok) {
-                    this.lead = await res.json();
+                    const response = await res.json();
+                    this.lead = response.data; // Extract data from wrapped response
                     this.convertForm.name = this.lead.title;
-                    this.convertForm.amount = this.lead.amount_display || 0;
+                    this.convertForm.amount = this.lead.amount || 0;
                 }
             } catch (e) {
                 console.error('Error loading lead:', e);
@@ -247,7 +248,7 @@ function leadShow() {
         async confirmConvert() {
             this.converting = true;
             try {
-                const res = await fetch(`/api/v1/crm/leads/${this.lead.id}/convert/`, {
+                const res = await fetch(`/api/v1/leads/${this.lead.id}/convert/`, {
                     method: 'POST',
                     headers: {
                         'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
@@ -259,7 +260,8 @@ function leadShow() {
                     })
                 });
                 if (res.ok) {
-                    const data = await res.json();
+                    const response = await res.json();
+                    const data = response.data; // Extract data from wrapped response
                     window.location.href = `/deals/${data.deal_id}`;
                 } else {
                     alert('Failed to convert lead');
@@ -275,7 +277,7 @@ function leadShow() {
             if (!confirm('Are you sure you want to delete this lead?')) return;
             
             try {
-                const res = await fetch(`/api/v1/crm/leads/${this.lead.id}/`, {
+                const res = await fetch(`/api/v1/leads/${this.lead.id}/`, {
                     method: 'DELETE',
                     headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
                 });

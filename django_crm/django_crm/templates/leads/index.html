@@ -108,9 +108,34 @@
         
         <!-- List View Table -->
         <div x-show="!loading && leads.length > 0 && viewMode === 'list'" class="overflow-x-auto">
+            <!-- Bulk Actions Bar -->
+            <div x-show="selectedLeads.length > 0" x-transition
+                class="mb-4 p-3 bg-indigo-50 border border-indigo-200 rounded-lg flex items-center justify-between">
+                <div class="flex items-center">
+                    <span class="text-sm text-indigo-700 font-medium">
+                        <span x-text="selectedLeads.length"></span> lead(s) selected
+                    </span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button @click="bulkDelete()" 
+                        class="px-3 py-1.5 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition">
+                        <i class="fas fa-trash mr-1"></i> Delete Selected
+                    </button>
+                    <button @click="selectedLeads = []" 
+                        class="px-3 py-1.5 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300 transition">
+                        Clear Selection
+                    </button>
+                </div>
+            </div>
+            
             <table class="min-w-full">
                 <thead class="bg-gray-50 border-b border-gray-200">
                     <tr>
+                        <th class="px-6 py-3 text-left">
+                            <input type="checkbox" @change="toggleSelectAll($event.target.checked)" 
+                                :checked="selectedLeads.length === leads.length && leads.length > 0"
+                                class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                        </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Labels</th>
@@ -126,6 +151,10 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     <template x-for="lead in leads" :key="lead.id">
                         <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <input type="checkbox" :value="lead.id" x-model="selectedLeads"
+                                    class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="formatDate(lead.created_at)"></td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <a :href="'/leads/' + lead.id" class="text-blue-600 hover:text-blue-800 font-medium text-sm" x-text="lead.title"></a>
@@ -134,20 +163,17 @@
                                 <template x-if="lead.labels">
                                     <div class="flex flex-wrap gap-1">
                                         <template x-for="label in (lead.labels || '').split(',').filter(l => l.trim())" :key="label">
-                                            <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600" x-text="label.trim()"></span>
+                                            <span class="px-2 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-800" x-text="label.trim()"></span>
                                         </template>
                                     </div>
                                 </template>
                                 <span x-show="!lead.labels" class="text-gray-400 text-sm">-</span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700" x-text="formatCurrency(lead.amount_display, lead.currency)"></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700" x-text="lead.customer_name || '-'"></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700" x-text="(lead.person_name || '') + ' ' + (lead.person_last_name || '') || '-'"></td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700" x-text="lead.organisation_name || '-'"></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700" x-text="lead.person_name || '-'"></td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span x-show="lead.pipeline_stage_name" class="px-2 py-1 text-xs rounded bg-blue-50 text-blue-700" x-text="lead.pipeline_stage_name"></span>
-                                <span x-show="!lead.pipeline_stage_name" class="text-gray-400 text-sm">-</span>
-                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700" x-text="(lead.person_name || '') + ' ' + (lead.person_last_name || '') || '-'"></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700" x-text="lead.lead_status_name || '-'"></td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700" x-text="lead.owner_name || '-'"></td>
                             <td class="px-6 py-4 whitespace-nowrap text-right">
                                 <div class="flex items-center justify-end gap-2">
@@ -174,11 +200,15 @@
         <!-- Grid View -->
         <div x-show="!loading && leads.length > 0 && viewMode === 'grid'" class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             <template x-for="lead in leads" :key="lead.id">
-                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+                <div @click="goToLead(lead.id)" @keydown="handleCardKeydown($event, lead.id)" tabindex="0" role="button" aria-label="View lead details" class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200 cursor-pointer hover:border-blue-300 hover:bg-blue-50 group focus:outline-none focus:ring-2 focus:ring-blue-500 relative">
+                    <!-- Click indicator -->
+                    <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <i class="fas fa-arrow-right text-blue-500 text-xs"></i>
+                    </div>
                     <div class="flex items-start justify-between mb-3">
-                        <a :href="'/leads/' + lead.id" class="text-blue-600 hover:text-blue-800 font-medium" x-text="lead.title"></a>
-                        <div class="flex gap-1">
-                            <a :href="'/leads/' + lead.id + '/edit'" class="text-gray-400 hover:text-gray-600">
+                        <a :href="'/leads/' + lead.id" @click.stop="goToLead(lead.id)" class="text-blue-600 hover:text-blue-800 font-medium group-hover:text-blue-900" x-text="lead.title"></a>
+                        <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <a :href="'/leads/' + lead.id + '/edit'" @click.stop class="text-gray-400 hover:text-gray-600 hover:text-blue-600">
                                 <i class="fas fa-edit text-sm"></i>
                             </a>
                         </div>
@@ -198,7 +228,7 @@
                         </div>
                     </div>
                     <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-                        <span x-show="lead.pipeline_stage_name" class="px-2 py-0.5 text-xs rounded bg-blue-50 text-blue-700" x-text="lead.pipeline_stage_name"></span>
+                        <span x-show="lead.lead_status_name" class="px-2 py-0.5 text-xs rounded bg-blue-50 text-blue-700" x-text="lead.lead_status_name"></span>
                         <span class="text-xs text-gray-400" x-text="formatDate(lead.created_at)"></span>
                     </div>
                 </div>
@@ -231,6 +261,7 @@
 function leadsIndex() {
     return {
         leads: [],
+        selectedLeads: [],
         leadStatuses: [],
         pipelineStages: [],
         users: [],
@@ -302,13 +333,17 @@ function leadsIndex() {
                 if (this.filters.pipeline_stage_id) params.append('pipeline_stage_id', this.filters.pipeline_stage_id);
                 if (this.filters.owner_id) params.append('owner_id', this.filters.owner_id);
                 
-                const res = await fetch('/api/v1/crm/leads/?' + params.toString(), {
+                const res = await fetch('/api/v1/leads/?' + params.toString(), {
                     headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
                 });
                 const data = await res.json();
+                console.log('Leads API response:', data);
+                console.log('First lead data:', data.data ? data.data[0] : 'No data');
                 if (data.success) {
                     this.leads = data.data;
                     this.meta = data.meta;
+                    console.log('Leads loaded:', this.leads.length, 'leads');
+                    console.log('First lead fields:', this.leads[0] ? Object.keys(this.leads[0]) : 'No leads');
                 }
             } catch (e) { console.error('Error loading leads:', e); }
             this.loading = false;
@@ -323,7 +358,7 @@ function leadsIndex() {
         async convertLead(lead) {
             if (!confirm(`Convert "${lead.title}" to a deal?`)) return;
             try {
-                const res = await fetch('/api/v1/crm/leads/' + lead.id + '/convert/', {
+                const res = await fetch('/api/v1/leads/' + lead.id + '/convert/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -343,7 +378,7 @@ function leadsIndex() {
         async deleteLead(lead) {
             if (!confirm(`Delete "${lead.title}"?`)) return;
             try {
-                const res = await fetch('/api/v1/crm/leads/' + lead.id + '/', {
+                const res = await fetch('/api/v1/leads/' + lead.id + '/', {
                     method: 'DELETE',
                     headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
                 });
@@ -380,6 +415,56 @@ function leadsIndex() {
                 style: 'currency',
                 currency: currency || 'USD'
             }).format(amount);
+        },
+        
+        toggleSelectAll(checked) {
+            if (checked) {
+                this.selectedLeads = this.leads.map(lead => lead.id);
+            } else {
+                this.selectedLeads = [];
+            }
+        },
+        
+        async bulkDelete() {
+            if (this.selectedLeads.length === 0) return;
+            
+            if (!confirm(`Are you sure you want to delete ${this.selectedLeads.length} lead(s)?`)) return;
+            
+            try {
+                const res = await fetch('/api/v1/leads/bulk_delete/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        lead_ids: this.selectedLeads
+                    })
+                });
+                
+                const data = await res.json();
+                if (data.success) {
+                    this.selectedLeads = [];
+                    await this.loadData();
+                } else {
+                    alert(data.message || 'Error deleting leads');
+                }
+            } catch (e) {
+                console.error('Error deleting leads:', e);
+                alert('Error deleting leads');
+            }
+        },
+        
+        goToLead(leadId) {
+            window.location.href = '/leads/' + leadId;
+        },
+        
+        // Keyboard navigation for cards
+        handleCardKeydown(event, leadId) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                this.goToLead(leadId);
+            }
         }
     }
 }

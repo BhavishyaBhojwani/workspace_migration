@@ -9,9 +9,9 @@ from .views import (
     OrganisationViewSet, PersonViewSet,
     LabelViewSet, OrganisationTypeViewSet, IndustryViewSet,
     PipelineViewSet, PipelineStageViewSet,
-    LeadStatusViewSet, LeadSourceViewSet,
-    LeadViewSet, DealViewSet,
+    DealViewSet,
 )
+from apps.leads.views import LeadViewSet, LeadStatusViewSet, LeadSourceViewSet
 
 # Router for viewsets
 router = DefaultRouter()
@@ -31,4 +31,5 @@ router.register(r'deals', DealViewSet, basename='deals')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('', include('apps.leads.urls')),  # Include leads app URLs
 ]
