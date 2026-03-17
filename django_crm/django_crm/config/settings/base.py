@@ -13,8 +13,7 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "unsafe-secret-key")
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = ["192.168.13.44", "127.0.0.1", "localhost"]
 
 # ========================
 # APPLICATIONS
@@ -211,9 +210,18 @@ SIMPLE_JWT = {
 # CORS SETTINGS
 # ========================
 
-CORS_ALLOWED_ORIGINS = os.getenv(
-    "CORS_ALLOWED_ORIGINS", 
-    "http://localhost:3000,http://localhost:5173,http://127.0.0.1:8000,http://localhost:8000"
-).split(",")
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "http://192.168.13.44:8000",
+]
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+    "http://192.168.13.44:8000",
+]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = True  # For development - remove in production

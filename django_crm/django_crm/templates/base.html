@@ -51,8 +51,8 @@
     {% block content %}{% endblock %}
     
     <script>
-        // API Helper
-        const API_BASE = 'http://127.0.0.1:8000/api/v1';
+        // API Helper - Uses relative URL for cross-device compatibility
+        const API_BASE = '/api/v1';
         
         const api = {
             getToken() {
