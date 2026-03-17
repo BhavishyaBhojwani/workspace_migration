@@ -64,7 +64,7 @@ class LeadService:
     @staticmethod
     def delete_lead(user, lead):
         """Soft delete a lead."""
-        lead.soft_delete(user.id if user else None)
+        lead.soft_delete(user)  # Pass User instance, not ID
         
         # Log activity
         LeadService._log_activity(user, lead, 'deleted')
@@ -72,7 +72,7 @@ class LeadService:
     @staticmethod
     def restore_lead(user, lead):
         """Restore a soft deleted lead."""
-        lead.restore(user.id if user else None)
+        lead.restore(user)  # Pass User instance, not ID
         
         # Log activity
         LeadService._log_activity(user, lead, 'restored')
@@ -93,10 +93,13 @@ class LeadService:
                 lead=lead,  # Establish the lead relationship
                 person_id=lead.person_id,
                 organisation_id=lead.organisation_id,
+                pipeline_id=lead.pipeline_id,
+                pipeline_stage_id=lead.pipeline_stage_id,
                 title=conversion_data.get('name', lead.title),
                 description=lead.description,
                 amount=conversion_data.get('amount', lead.amount),
                 currency=lead.currency,
+                expected_close=lead.expected_close,
                 user_created=user if user else None,
                 user_updated=user if user else None,
                 user_owner=user if user else None,
@@ -107,6 +110,10 @@ class LeadService:
             lead.converted_at = timezone.now()
             lead.user_updated_id = user.id if user else None
             lead.save()
+            
+            # Copy labels from lead to deal
+            for label in lead.labels.all():
+                deal.labels.add(label)
             
             # Log activity
             LeadService._log_activity(user, lead, 'converted_to_deal')

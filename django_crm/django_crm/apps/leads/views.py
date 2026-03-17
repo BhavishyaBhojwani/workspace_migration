@@ -164,6 +164,25 @@ class LeadViewSet(ViewSet):
         })
     
     @action(detail=True, methods=['post'])
+    def restore(self, request, pk=None):
+        """POST /leads/{id}/restore - Restore a soft deleted lead."""
+        # For restore, we need to include deleted leads in queryset
+        queryset = Lead.objects.filter(is_deleted=True)
+        
+        # Apply team filtering if user has team access
+        if request.user and hasattr(request.user, 'current_crm_team_id') and request.user.current_crm_team_id:
+            queryset = queryset.filter(team_id=request.user.current_crm_team_id)
+        
+        # Only allow restoring leads that belong to user's team
+        lead = get_object_or_404(queryset, pk=pk)
+        
+        LeadService.restore_lead(request.user, lead)
+        return Response({
+            'success': True,
+            'message': 'Lead restored successfully'
+        })
+    
+    @action(detail=True, methods=['post'])
     def convert(self, request, pk=None):
         """POST /leads/{id}/convert - Convert lead to deal."""
         queryset = LeadSelector.get_queryset(request.user)

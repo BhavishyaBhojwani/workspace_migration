@@ -39,6 +39,10 @@ coverage/
 media/
 staticfiles/
 static/
+!**/static/manifest.json
+!**/static/js/service-worker.js
+!**/static/icons/
+!**/static/icons/**
 local_settings.py
 *.sqlite3
 *.db

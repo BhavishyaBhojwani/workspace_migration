@@ -368,7 +368,7 @@ function leadsIndex() {
                 });
                 const data = await res.json();
                 if (data.success) {
-                    window.location.href = '/deals/' + data.data.id;
+                    window.location.href = '/deals/' + data.data.deal_id;
                 } else {
                     alert(data.message || 'Error converting lead');
                 }
@@ -376,16 +376,30 @@ function leadsIndex() {
         },
         
         async deleteLead(lead) {
-            if (!confirm(`Delete "${lead.title}"?`)) return;
+            if (!confirm(`Are you sure you want to delete lead "${lead.title}"?`)) return;
+            
             try {
                 const res = await fetch('/api/v1/leads/' + lead.id + '/', {
                     method: 'DELETE',
-                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                    headers: { 
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+                        'Content-Type': 'application/json'
+                    }
                 });
+                
                 const data = await res.json();
-                if (data.success) await this.loadData();
-                else alert(data.message || 'Error deleting lead');
-            } catch (e) { console.error('Error deleting lead:', e); }
+                if (data.success) {
+                    // Show success message with undo option
+                    this.showSuccessMessageWithUndo('Lead deleted successfully', lead.id);
+                    // Reload data to refresh page
+                    await this.loadData();
+                } else {
+                    this.showErrorMessage(data.message || 'Error deleting lead');
+                }
+            } catch (e) {
+                console.error('Error deleting lead:', e);
+                this.showErrorMessage('Error deleting lead');
+            }
         },
         
         prevPage() {
@@ -445,13 +459,14 @@ function leadsIndex() {
                 const data = await res.json();
                 if (data.success) {
                     this.selectedLeads = [];
+                    this.showSuccessMessage(`${this.selectedLeads.length} lead(s) deleted successfully`);
                     await this.loadData();
                 } else {
-                    alert(data.message || 'Error deleting leads');
+                    this.showErrorMessage(data.message || 'Error deleting leads');
                 }
             } catch (e) {
                 console.error('Error deleting leads:', e);
-                alert('Error deleting leads');
+                this.showErrorMessage('Error deleting leads');
             }
         },
         
@@ -464,6 +479,107 @@ function leadsIndex() {
             if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
                 this.goToLead(leadId);
+            }
+        },
+        
+        // Success and error message functions
+        showSuccessMessage(message) {
+            // Create a temporary success notification
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            // Animate in
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+                notification.classList.add('translate-x-0');
+            }, 100);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        },
+        
+        showSuccessMessageWithUndo(message, leadId) {
+            // Create a notification with undo button
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full';
+            notification.innerHTML = `
+                <div class="flex items-center justify-between gap-4">
+                    <span>${message}</span>
+                    <button onclick="window.restoreLead(${leadId})" class="bg-white text-green-600 px-3 py-1 rounded text-sm font-medium hover:bg-gray-100 transition-colors">
+                        Undo
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(notification);
+            
+            // Animate in
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+                notification.classList.add('translate-x-0');
+            }, 100);
+            
+            // Auto-remove after 10 seconds
+            setTimeout(() => {
+                if (document.body.contains(notification)) {
+                    notification.classList.add('translate-x-full');
+                    setTimeout(() => {
+                        if (document.body.contains(notification)) {
+                            document.body.removeChild(notification);
+                        }
+                    }, 300);
+                }
+            }, 10000); // 10 seconds
+        },
+        
+        showErrorMessage(message) {
+            // Create a temporary error notification
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            // Animate in
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+                notification.classList.add('translate-x-0');
+            }, 100);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        },
+        
+        async restoreLead(leadId) {
+            try {
+                const res = await fetch('/api/v1/leads/' + leadId + '/restore/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await res.json();
+                if (data.success) {
+                    this.showSuccessMessage('Lead restored successfully');
+                    await this.loadData();
+                } else {
+                    this.showErrorMessage(data.message || 'Error restoring lead');
+                }
+            } catch (e) {
+                console.error('Error restoring lead:', e);
+                this.showErrorMessage('Error restoring lead');
             }
         }
     }

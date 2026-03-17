@@ -98,4 +98,7 @@ urlpatterns = [
     
     # Settings
     path("settings/", TemplateView.as_view(template_name="settings/index.html"), name="settings"),
+    
+    # PWA Offline page
+    path("offline/", TemplateView.as_view(template_name="offline.html"), name="offline"),
 ]

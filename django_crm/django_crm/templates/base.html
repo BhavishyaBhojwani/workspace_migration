@@ -3,6 +3,19 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#1f2937">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Django CRM">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.svg">
+    
+    <!-- PWA Description -->
+    <meta name="description" content="A full-featured CRM application for managing leads, deals, and customer relationships">
+    <meta name="mobile-web-app-capable" content="yes">
+    
     <title>{% block title %}Django CRM{% endblock %}</title>
     
     <!-- Tailwind CSS -->
@@ -93,6 +106,145 @@
                 });
             }
         };
+    </script>
+    
+    <!-- PWA Install Prompt Component -->
+    <div x-data="pwaInstall()" x-show="showInstallPrompt" x-cloak 
+         class="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-white rounded-xl shadow-2xl p-4 z-50 border border-gray-200"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 translate-y-4"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
+        <div class="flex items-start gap-3">
+            <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-mobile-alt text-white text-xl"></i>
+            </div>
+            <div class="flex-1">
+                <h3 class="font-semibold text-gray-800">Install Django CRM</h3>
+                <p class="text-sm text-gray-600 mt-1">Add this app to your home screen for quick access</p>
+                <div class="flex gap-2 mt-3">
+                    <button @click="installApp()" 
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">
+                        Install
+                    </button>
+                    <button @click="dismissPrompt()" 
+                            class="text-gray-500 hover:text-gray-700 text-sm font-medium px-4 py-2">
+                        Not now
+                    </button>
+                </div>
+            </div>
+            <button @click="dismissPrompt()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Service Worker Registration -->
+    <script>
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/js/service-worker.js')
+                    .then((registration) => {
+                        console.log('[PWA] Service Worker registered:', registration.scope);
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New content available
+                                    console.log('[PWA] New version available');
+                                    // Optionally show update notification
+                                }
+                            });
+                        });
+                    })
+                    .catch((error) => {
+                        console.error('[PWA] Service Worker registration failed:', error);
+                    });
+            });
+        }
+
+        // PWA Install Prompt
+        function pwaInstall() {
+            return {
+                showInstallPrompt: false,
+                deferredPrompt: null,
+                
+                init() {
+                    // Listen for beforeinstallprompt event
+                    window.addEventListener('beforeinstallprompt', (e) => {
+                        // Prevent the mini-infobar from appearing on mobile
+                        e.preventDefault();
+                        // Store the event for later use
+                        this.deferredPrompt = e;
+                        // Show custom install prompt
+                        this.showInstallPrompt = true;
+                        console.log('[PWA] Install prompt available');
+                    });
+                    
+                    // Listen for app installed event
+                    window.addEventListener('appinstalled', () => {
+                        console.log('[PWA] App installed');
+                        this.showInstallPrompt = false;
+                        this.deferredPrompt = null;
+                    });
+                    
+                    // Check if already installed
+                    if (window.matchMedia('(display-mode: standalone)').matches || 
+                        window.navigator.standalone === true) {
+                        console.log('[PWA] App is running in standalone mode');
+                    }
+                },
+                
+                async installApp() {
+                    if (!this.deferredPrompt) {
+                        console.log('[PWA] Install prompt not available');
+                        // If on iOS, show manual instructions
+                        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                            alert('To install on iOS: tap the Share button and then "Add to Home Screen"');
+                        }
+                        return;
+                    }
+                    
+                    // Show the install prompt
+                    this.deferredPrompt.prompt();
+                    
+                    // Wait for user choice
+                    const { outcome } = await this.deferredPrompt.userChoice;
+                    console.log(`[PWA] User ${outcome === 'accepted' ? 'installed' : 'dismissed'} the app`);
+                    
+                    // Clear the deferred prompt
+                    this.deferredPrompt = null;
+                    this.showInstallPrompt = false;
+                },
+                
+                dismissPrompt() {
+                    this.showInstallPrompt = false;
+                    // Store dismissal time to not show again for 24 hours
+                    localStorage.setItem('pwaPromptDismissed', Date.now().toString());
+                }
+            };
+        }
+
+        // Online/Offline status
+        window.addEventListener('online', () => {
+            console.log('[PWA] Connection restored');
+            // Optionally show a toast notification
+        });
+
+        window.addEventListener('offline', () => {
+            console.log('[PWA] Connection lost');
+            // Optionally show offline notification
+        });
+
+        // Check initial connection status
+        if (!navigator.onLine) {
+            console.log('[PWA] Starting in offline mode');
+        }
     </script>
     
     {% block scripts %}{% endblock %}

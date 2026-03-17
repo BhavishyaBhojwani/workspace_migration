@@ -3,6 +3,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelatio
 from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -180,9 +181,9 @@ class Lead(models.Model):
     def soft_delete(self, user=None):
         """Soft delete the lead."""
         self.is_deleted = True
-        self.deleted_at = models.timezone.now()
+        self.deleted_at = timezone.now()
         if user:
-            self.user_deleted = user
+            self.user_deleted = user  # Pass User instance, not ID
         self.save()
     
     def restore(self, user=None):

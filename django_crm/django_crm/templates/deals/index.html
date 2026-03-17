@@ -89,6 +89,17 @@
                 </select>
             </div>
         </div>
+        
+        <!-- Bulk Actions Bar -->
+        <div x-show="selectedDeals.length > 0" class="mt-4 pt-4 border-t border-gray-200 flex items-center gap-4">
+            <span class="text-sm text-gray-600"><span x-text="selectedDeals.length"></span> selected</span>
+            <button @click="bulkDelete()" class="px-3 py-1.5 bg-red-500 text-white text-sm rounded hover:bg-red-600 flex items-center gap-1">
+                <i class="fas fa-trash"></i> Delete Selected
+            </button>
+            <button @click="selectedDeals = []" class="text-sm text-gray-600 hover:text-gray-800">
+                Clear Selection
+            </button>
+        </div>
     </div>
     
     <!-- Loading State -->
@@ -169,6 +180,11 @@
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
+                        <th class="px-4 py-3 text-left">
+                            <input type="checkbox" @change="toggleSelectAll($event.target.checked)"
+                                :checked="selectedDeals.length === deals.length && deals.length > 0"
+                                class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                        </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deal</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organisation</th>
@@ -184,6 +200,10 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     <template x-for="deal in deals" :key="deal.id">
                         <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <input type="checkbox" :value="deal.id" x-model="selectedDeals"
+                                    class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <a :href="'/deals/' + deal.id" class="text-indigo-600 hover:text-indigo-800 font-medium" x-text="deal.title"></a>
                                 <p class="text-gray-500 text-sm" x-text="deal.deal_id"></p>
@@ -275,6 +295,7 @@
 function dealsIndex() {
     return {
         deals: [],
+        selectedDeals: [],
         loading: true,
         search: '',
         filters: {
@@ -354,7 +375,13 @@ function dealsIndex() {
                 });
                 const data = await response.json();
                 console.log('Deals API response:', data);
-                console.log('First deal data:', data.data ? data.data[0] : 'No data');
+                if (data.success && data.data && data.data.length > 0) {
+                    const firstDeal = data.data[0];
+                    console.log('First deal:', firstDeal);
+                    console.log('pipeline_stage_name:', firstDeal.pipeline_stage_name);
+                    console.log('expected_close:', firstDeal.expected_close);
+                    console.log('labels:', firstDeal.labels);
+                }
                 if (data.success) {
                     this.deals = data.data;
                     this.meta = data.meta;
@@ -373,7 +400,7 @@ function dealsIndex() {
             if (!confirm(`Mark "${deal.title}" as ${status}?`)) return;
             
             try {
-                const response = await fetch('/api/v1/crm/deals/' + deal.id + '/close/', {
+                const response = await fetch('/api/v1/deals/' + deal.id + '/close/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -397,7 +424,7 @@ function dealsIndex() {
             if (!confirm(`Reopen "${deal.title}"?`)) return;
             
             try {
-                const response = await fetch('/api/v1/crm/deals/' + deal.id + '/reopen/', {
+                const response = await fetch('/api/v1/deals/' + deal.id + '/reopen/', {
                     method: 'POST',
                     headers: {
                         'Authorization': 'Bearer ' + localStorage.getItem('access_token')
@@ -419,7 +446,7 @@ function dealsIndex() {
             if (!confirm(`Delete "${deal.title}"?`)) return;
             
             try {
-                const response = await fetch('/api/v1/crm/deals/' + deal.id + '/', {
+                const response = await fetch('/api/v1/deals/' + deal.id + '/', {
                     method: 'DELETE',
                     headers: {
                         'Authorization': 'Bearer ' + localStorage.getItem('access_token')
@@ -434,6 +461,45 @@ function dealsIndex() {
                 }
             } catch (error) {
                 console.error('Error deleting deal:', error);
+            }
+        },
+        
+        toggleSelectAll(checked) {
+            if (checked) {
+                this.selectedDeals = this.deals.map(deal => deal.id);
+            } else {
+                this.selectedDeals = [];
+            }
+        },
+        
+        async bulkDelete() {
+            if (this.selectedDeals.length === 0) return;
+            
+            if (!confirm(`Are you sure you want to delete ${this.selectedDeals.length} deal(s)?`)) return;
+            
+            try {
+                const response = await fetch('/api/v1/deals/bulk_delete/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    },
+                    body: JSON.stringify({
+                        deal_ids: this.selectedDeals
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    this.selectedDeals = [];
+                    await this.loadData();
+                    await this.loadStats();
+                } else {
+                    alert(data.message || 'Error deleting deals');
+                }
+            } catch (error) {
+                console.error('Error bulk deleting deals:', error);
+                alert('Error deleting deals');
             }
         },
         

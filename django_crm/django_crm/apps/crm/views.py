@@ -1373,6 +1373,31 @@ class DealViewSet(ViewSet):
             'message': 'Deal moved to new stage'
         })
     
+    @action(detail=False, methods=['post'])
+    def bulk_delete(self, request):
+        """POST /deals/bulk_delete - Delete multiple deals."""
+        deal_ids = request.data.get('deal_ids', [])
+        
+        if not deal_ids:
+            return Response({
+                'success': False,
+                'message': 'No deal IDs provided'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        deleted_count = 0
+        for deal_id in deal_ids:
+            try:
+                deal = DealSelector.get_queryset(request.user).get(pk=deal_id)
+                DealService.delete(deal, request.user)
+                deleted_count += 1
+            except Deal.DoesNotExist:
+                continue
+        
+        return Response({
+            'success': True,
+            'message': f'{deleted_count} deal(s) deleted successfully'
+        })
+    
     @action(detail=False, methods=['get'])
     def search(self, request):
         """GET /deals/search - Search deals for autocomplete."""

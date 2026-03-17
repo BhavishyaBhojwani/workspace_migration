@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.contenttypes.fields import GenericRelation
 
 
 class Pipeline(models.Model):
@@ -347,6 +348,9 @@ class Deal(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     is_deleted = models.BooleanField(default=False)
     deleted_at = models.DateTimeField(null=True, blank=True)
+    
+    # Generic relations
+    labels = GenericRelation('crm.Label')
 
     class Meta:
         db_table = 'deals'
